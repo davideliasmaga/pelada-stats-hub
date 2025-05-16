@@ -1,6 +1,7 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Ball, PieChart, BarChart, Settings } from "lucide-react";
+import { Football, PieChart, BarChart, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { getTopScorers, getTotalBalance } from "@/services/dataService";
@@ -18,7 +19,7 @@ const Index = () => {
       <div className="container mx-auto space-y-8">
         <div className="flex flex-col items-center justify-center py-12 space-y-4">
           <div className="flex items-center gap-3">
-            <Ball className="h-12 w-12 text-grass animate-bounce-subtle" />
+            <Football className="h-12 w-12 text-grass animate-bounce-subtle" />
             <h1 className="text-4xl font-bold text-grass">Pelada Stats Hub</h1>
           </div>
           <p className="text-xl text-gray-600 text-center max-w-lg">
@@ -124,6 +125,3 @@ const Index = () => {
 };
 
 export default Index;
-
-// Import necessary icons at the top to avoid build errors
-import { PieChart, BarChart, Settings } from "lucide-react";

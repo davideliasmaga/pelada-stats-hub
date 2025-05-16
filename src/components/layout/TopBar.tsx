@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { UserRole } from "@/types";
+import { LogoWhiteBg } from "@/assets/logo-white-bg";
 
 const TopBar = () => {
   const { currentUser, setCurrentUser } = useUser();
@@ -33,8 +34,9 @@ const TopBar = () => {
   
   return (
     <header className="border-b bg-white p-4 flex items-center justify-between">
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
         <SidebarTrigger className="md:hidden mr-2" />
+        <LogoWhiteBg className="h-8 w-8" />
         <h1 className="text-xl font-bold">Pelada Sagaz</h1>
       </div>
       

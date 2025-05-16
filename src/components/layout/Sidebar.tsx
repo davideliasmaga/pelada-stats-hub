@@ -10,7 +10,7 @@ import {
   SidebarTrigger
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { Home, BarChart, Settings, Users, Calendar, PieChart, Football } from "lucide-react";
+import { Home, BarChart, Settings, Users, Calendar, PieChart, Dribbble } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 
 const Sidebar = () => {
@@ -23,7 +23,7 @@ const Sidebar = () => {
     <SidebarComponent>
       <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Football className="h-6 w-6 text-grass" />
+          <Dribbble className="h-6 w-6 text-grass" />
           <h2 className="font-bold text-lg">Pelada Stats</h2>
         </div>
         <SidebarTrigger className="md:hidden p-2" />

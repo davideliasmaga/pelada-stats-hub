@@ -1,4 +1,3 @@
-
 import { Player, Game, Goal, Transaction, PlayerPosition, RunningAbility, GameType, TransactionType } from '@/types';
 
 // Mock data
@@ -208,8 +207,8 @@ export const getTopScorers = (
       const player = players.find(p => p.id === playerId);
       return player ? { player, goals } : null;
     })
-    .filter(Boolean) as Array<{ player: Player; goals: number }>
-    .sort((a, b) => b.goals - a.goals);
+    .filter(Boolean as any)
+    .sort((a, b) => b.goals - a.goals) as Array<{ player: Player; goals: number }>;
 };
 
 export const generateBalancedTeams = (playerIds: string[], numTeams: number): Player[][] => {

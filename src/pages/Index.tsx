@@ -1,14 +1,130 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { SoccerBall } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { getTopScorers, getTotalBalance } from "@/services/dataService";
+import MainLayout from "@/components/layout/MainLayout";
+import { useUser } from "@/contexts/UserContext";
 
 const Index = () => {
+  const navigate = useNavigate();
+  const { isAdmin, isMensalista } = useUser();
+  const topScorers = getTopScorers().slice(0, 3);
+  const balance = getTotalBalance();
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <MainLayout>
+      <div className="container mx-auto space-y-8">
+        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+          <div className="flex items-center gap-3">
+            <SoccerBall className="h-12 w-12 text-grass animate-bounce-subtle" />
+            <h1 className="text-4xl font-bold text-grass">Pelada Stats Hub</h1>
+          </div>
+          <p className="text-xl text-gray-600 text-center max-w-lg">
+            Gerencie suas peladas, acompanhe estatísticas e organize seus jogadores!
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart className="h-5 w-5 text-sky-blue" />
+                Artilharia
+              </CardTitle>
+              <CardDescription>Top 3 artilheiros</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3">
+                {topScorers.map(({ player, goals }, index) => (
+                  <li key={player.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center font-bold text-primary">
+                        {index + 1}
+                      </div>
+                      <span>{player.name}</span>
+                    </div>
+                    <span className="font-bold">{goals} gols</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                onClick={() => navigate('/artilharia')} 
+                variant="outline" 
+                className="w-full"
+              >
+                Ver artilharia completa
+              </Button>
+            </CardFooter>
+          </Card>
+
+          {isMensalista && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChart className="h-5 w-5 text-goal-red" />
+                  Financeiro
+                </CardTitle>
+                <CardDescription>Resumo financeiro</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center justify-center h-[100px]">
+                  <p className="text-sm">Saldo atual</p>
+                  <h3 className={`text-2xl font-bold ${balance >= 0 ? 'text-grass' : 'text-goal-red'}`}>
+                    R$ {balance.toFixed(2)}
+                  </h3>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={() => navigate('/financeiro')} 
+                  variant="outline" 
+                  className="w-full"
+                >
+                  Ver detalhes financeiros
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+
+          {isAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5 text-warm-yellow" />
+                  Administração
+                </CardTitle>
+                <CardDescription>Acesso rápido</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button onClick={() => navigate('/jogadores')} variant="outline" className="w-full">
+                  Gerenciar Jogadores
+                </Button>
+                <Button onClick={() => navigate('/jogos')} variant="outline" className="w-full">
+                  Gerenciar Jogos
+                </Button>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={() => navigate('/admin')} 
+                  className="w-full"
+                >
+                  Painel de Administração
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+        </div>
       </div>
-    </div>
+    </MainLayout>
   );
 };
 
 export default Index;
+
+// Import necessary icons at the top to avoid build errors
+import { PieChart, BarChart, Settings } from "lucide-react";

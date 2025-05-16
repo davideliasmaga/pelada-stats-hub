@@ -35,7 +35,7 @@ const TopBar = () => {
     <header className="border-b bg-white p-4 flex items-center justify-between">
       <div className="flex items-center">
         <SidebarTrigger className="md:hidden mr-2" />
-        <h1 className="text-xl font-bold">Pelada Stats Hub</h1>
+        <h1 className="text-xl font-bold">Pelada Sagaz</h1>
       </div>
       
       <div className="flex items-center gap-4">

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { getTopScorers, getTotalBalance } from "@/services/dataService";
 import MainLayout from "@/components/layout/MainLayout";
 import { useUser } from "@/contexts/UserContext";
-import { LogoBlackBg } from "@/assets/logo-black-bg";
+import { LogoWhiteBg } from "@/assets/logo-white-bg";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -20,7 +20,7 @@ const Index = () => {
       <div className="container mx-auto space-y-8">
         <div className="flex flex-col items-center justify-center py-12 space-y-4">
           <div className="flex items-center gap-3">
-            <LogoBlackBg className="h-12 w-12 animate-bounce-subtle" />
+            <LogoWhiteBg className="h-12 w-12 animate-bounce-subtle" />
             <h1 className="text-4xl font-bold text-gray-900">Pelada Sagaz</h1>
           </div>
           <p className="text-xl text-gray-600 text-center max-w-lg">

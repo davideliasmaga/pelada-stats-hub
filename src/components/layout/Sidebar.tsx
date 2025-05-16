@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Home, BarChart, Settings, Users, Calendar, PieChart } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
-import { LogoBlackBg } from "@/assets/logo-black-bg";
+import { LogoWhiteBg } from "@/assets/logo-white-bg";
 
 const Sidebar = () => {
   const { isAdmin, isMensalista } = useUser();
@@ -24,7 +24,7 @@ const Sidebar = () => {
     <SidebarComponent>
       <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <LogoBlackBg className="h-6 w-6" />
+          <LogoWhiteBg className="h-6 w-6" />
           <h2 className="font-bold text-lg">Pelada Sagaz</h2>
         </div>
         <SidebarTrigger className="md:hidden p-2" />

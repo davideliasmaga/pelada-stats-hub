@@ -63,9 +63,9 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Soccer-specific colors
-				grass: '#38B000',
-				field: '#D8F3DC',
+				// Soccer-specific colors (updated)
+				grass: '#333333', // Changed from green to dark gray
+				field: '#f5f5f5', // Changed from light green to light gray
 				'sky-blue': '#3A86FF',
 				'warm-yellow': '#FFBE0B',
 				'goal-red': '#FF006E',

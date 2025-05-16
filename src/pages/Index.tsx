@@ -19,8 +19,8 @@ const Index = () => {
       <div className="container mx-auto space-y-8">
         <div className="flex flex-col items-center justify-center py-12 space-y-4">
           <div className="flex items-center gap-3">
-            <Dribbble className="h-12 w-12 text-grass animate-bounce-subtle" />
-            <h1 className="text-4xl font-bold text-grass">Pelada Stats Hub</h1>
+            <Dribbble className="h-12 w-12 text-gray-800 animate-bounce-subtle" />
+            <h1 className="text-4xl font-bold text-gray-900">Pelada Sagaz</h1>
           </div>
           <p className="text-xl text-gray-600 text-center max-w-lg">
             Gerencie suas peladas, acompanhe estatísticas e organize seus jogadores!
@@ -31,7 +31,7 @@ const Index = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BarChart className="h-5 w-5 text-sky-blue" />
+                <BarChart className="h-5 w-5 text-gray-500" />
                 Artilharia
               </CardTitle>
               <CardDescription>Top 3 artilheiros</CardDescription>
@@ -41,7 +41,7 @@ const Index = () => {
                 {topScorers.map(({ player, goals }, index) => (
                   <li key={player.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center font-bold text-primary">
+                      <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-800">
                         {index + 1}
                       </div>
                       <span>{player.name}</span>
@@ -66,7 +66,7 @@ const Index = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <PieChart className="h-5 w-5 text-goal-red" />
+                  <PieChart className="h-5 w-5 text-gray-500" />
                   Financeiro
                 </CardTitle>
                 <CardDescription>Resumo financeiro</CardDescription>
@@ -74,7 +74,7 @@ const Index = () => {
               <CardContent>
                 <div className="flex flex-col items-center justify-center h-[100px]">
                   <p className="text-sm">Saldo atual</p>
-                  <h3 className={`text-2xl font-bold ${balance >= 0 ? 'text-grass' : 'text-goal-red'}`}>
+                  <h3 className={`text-2xl font-bold ${balance >= 0 ? 'text-gray-900' : 'text-red-500'}`}>
                     R$ {balance.toFixed(2)}
                   </h3>
                 </div>
@@ -95,7 +95,7 @@ const Index = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5 text-warm-yellow" />
+                  <Settings className="h-5 w-5 text-gray-500" />
                   Administração
                 </CardTitle>
                 <CardDescription>Acesso rápido</CardDescription>
@@ -111,7 +111,7 @@ const Index = () => {
               <CardFooter>
                 <Button 
                   onClick={() => navigate('/admin')} 
-                  className="w-full"
+                  className="w-full bg-gray-900 hover:bg-gray-800"
                 >
                   Painel de Administração
                 </Button>

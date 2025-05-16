@@ -11,28 +11,174 @@ import {
   TableHeader,
   TableRow 
 } from "@/components/ui/table";
-import { PieChart, LineChart } from "recharts";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { CalendarIcon, Plus } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
-import { getTransactions, getTotalBalance } from "@/services/dataService";
+import { getTransactions, getTotalBalance, createTransaction } from "@/services/dataService";
 import { Transaction, TransactionType } from "@/types";
 import { useUser } from "@/contexts/UserContext";
 import { Navigate } from "react-router-dom";
 
 const Financeiro = () => {
-  const { isMensalista } = useUser();
-  const transactions = getTransactions();
-  const balance = getTotalBalance();
+  const { isMensalista, isAdmin } = useUser();
+  const [transactions, setTransactions] = useState<Transaction[]>(getTransactions());
+  const [balance, setBalance] = useState<number>(getTotalBalance());
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Form state for new transaction
+  const [transactionDate, setTransactionDate] = useState<Date | undefined>(new Date());
+  const [transactionType, setTransactionType] = useState<TransactionType>("entrada");
+  const [transactionAmount, setTransactionAmount] = useState<string>("");
+  const [transactionDescription, setTransactionDescription] = useState<string>("");
   
   // Redirect if not a mensalista or admin
   if (!isMensalista) {
     return <Navigate to="/" />;
   }
 
+  const handleSaveTransaction = () => {
+    if (!transactionDate || !transactionAmount || !transactionDescription) return;
+
+    const amount = parseFloat(transactionAmount);
+    if (isNaN(amount) || amount <= 0) return;
+
+    const newTransaction = createTransaction({
+      date: transactionDate.toISOString(),
+      type: transactionType,
+      amount,
+      description: transactionDescription
+    });
+
+    // Update state
+    setTransactions([newTransaction, ...transactions]);
+    setBalance(getTotalBalance());
+    
+    // Reset form
+    setTransactionDate(new Date());
+    setTransactionType("entrada");
+    setTransactionAmount("");
+    setTransactionDescription("");
+    setDialogOpen(false);
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-3xl font-bold">Financeiro</h1>
+          
+          {isAdmin && (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-gray-900 hover:bg-gray-800">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nova Transação
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Adicionar Nova Transação</DialogTitle>
+                </DialogHeader>
+                
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="date">Data</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="date"
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left",
+                            !transactionDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {transactionDate ? (
+                            format(transactionDate, "PPP", { locale: ptBR })
+                          ) : (
+                            <span>Selecione uma data</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={transactionDate}
+                          onSelect={setTransactionDate}
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="type">Tipo</Label>
+                    <Select 
+                      value={transactionType} 
+                      onValueChange={(value) => setTransactionType(value as TransactionType)}
+                    >
+                      <SelectTrigger id="type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="entrada">Entrada</SelectItem>
+                          <SelectItem value="saida">Saída</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Valor (R$)</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={transactionAmount}
+                      onChange={(e) => setTransactionAmount(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Descrição</Label>
+                    <Input
+                      id="description"
+                      value={transactionDescription}
+                      onChange={(e) => setTransactionDescription(e.target.value)}
+                      placeholder="Descrição da transação"
+                    />
+                  </div>
+                </div>
+                
+                <DialogFooter>
+                  <Button
+                    onClick={handleSaveTransaction}
+                    className="bg-gray-900 hover:bg-gray-800"
+                    disabled={
+                      !transactionDate || 
+                      !transactionAmount || 
+                      !transactionDescription || 
+                      parseFloat(transactionAmount) <= 0
+                    }
+                  >
+                    Salvar Transação
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -42,7 +188,7 @@ const Financeiro = () => {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col items-center justify-center py-8">
-                <h2 className={`text-5xl font-bold ${balance >= 0 ? 'text-grass' : 'text-goal-red'}`}>
+                <h2 className={`text-5xl font-bold ${balance >= 0 ? 'text-gray-900' : 'text-red-500'}`}>
                   R$ {balance.toFixed(2)}
                 </h2>
                 <p className="text-muted-foreground mt-2">
@@ -76,14 +222,14 @@ const Financeiro = () => {
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs ${
                           transaction.type === 'entrada' 
-                            ? 'bg-green-100 text-grass' 
-                            : 'bg-red-100 text-goal-red'
+                            ? 'bg-gray-200 text-gray-900' 
+                            : 'bg-red-100 text-red-500'
                         }`}>
                           {transaction.type === 'entrada' ? 'Entrada' : 'Saída'}
                         </span>
                       </TableCell>
                       <TableCell className={`text-right font-medium ${
-                        transaction.type === 'entrada' ? 'text-grass' : 'text-goal-red'
+                        transaction.type === 'entrada' ? 'text-gray-900' : 'text-red-500'
                       }`}>
                         {transaction.type === 'entrada' ? '+' : '-'} 
                         {transaction.amount.toFixed(2)}

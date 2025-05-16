@@ -8,12 +8,12 @@ const NotFound = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-field">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
       <div className="text-center space-y-6 max-w-md mx-auto p-6">
         <div className="flex items-center justify-center">
-          <Dribbble className="h-20 w-20 text-grass animate-bounce-subtle" />
+          <Dribbble className="h-20 w-20 text-gray-800 animate-bounce-subtle" />
         </div>
-        <h1 className="text-6xl font-bold text-grass">404</h1>
+        <h1 className="text-6xl font-bold text-gray-900">404</h1>
         <h2 className="text-2xl font-semibold">Página não encontrada</h2>
         <p className="text-gray-600">
           Parece que esta página saiu dos limites do campo.
@@ -22,7 +22,7 @@ const NotFound = () => {
         <Button 
           onClick={() => navigate("/")} 
           size="lg"
-          className="rounded-full"
+          className="rounded-full bg-gray-900 hover:bg-gray-800"
         >
           Voltar para a Página Inicial
         </Button>

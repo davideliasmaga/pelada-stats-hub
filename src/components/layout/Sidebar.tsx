@@ -23,8 +23,8 @@ const Sidebar = () => {
     <SidebarComponent>
       <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Dribbble className="h-6 w-6 text-grass" />
-          <h2 className="font-bold text-lg">Pelada Stats</h2>
+          <Dribbble className="h-6 w-6 text-gray-700" />
+          <h2 className="font-bold text-lg">Pelada Sagaz</h2>
         </div>
         <SidebarTrigger className="md:hidden p-2" />
       </div>
@@ -34,7 +34,7 @@ const Sidebar = () => {
           <SidebarMenuItem>
             <SidebarMenuButton asChild className={cn(
               "flex items-center gap-3 px-4 py-2 rounded-full",
-              isActive('/') && "bg-primary text-primary-foreground"
+              isActive('/') && "bg-gray-800 text-white"
             )}>
               <Link to="/">
                 <Home className="h-5 w-5" />
@@ -46,7 +46,7 @@ const Sidebar = () => {
           <SidebarMenuItem>
             <SidebarMenuButton asChild className={cn(
               "flex items-center gap-3 px-4 py-2 rounded-full",
-              isActive('/artilharia') && "bg-primary text-primary-foreground"
+              isActive('/artilharia') && "bg-gray-800 text-white"
             )}>
               <Link to="/artilharia">
                 <BarChart className="h-5 w-5" />
@@ -59,7 +59,7 @@ const Sidebar = () => {
             <SidebarMenuItem>
               <SidebarMenuButton asChild className={cn(
                 "flex items-center gap-3 px-4 py-2 rounded-full",
-                isActive('/financeiro') && "bg-primary text-primary-foreground"
+                isActive('/financeiro') && "bg-gray-800 text-white"
               )}>
                 <Link to="/financeiro">
                   <PieChart className="h-5 w-5" />
@@ -74,7 +74,7 @@ const Sidebar = () => {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={cn(
                   "flex items-center gap-3 px-4 py-2 rounded-full",
-                  isActive('/jogadores') && "bg-primary text-primary-foreground"
+                  isActive('/jogadores') && "bg-gray-800 text-white"
                 )}>
                   <Link to="/jogadores">
                     <Users className="h-5 w-5" />
@@ -86,7 +86,7 @@ const Sidebar = () => {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={cn(
                   "flex items-center gap-3 px-4 py-2 rounded-full",
-                  isActive('/jogos') && "bg-primary text-primary-foreground"
+                  isActive('/jogos') && "bg-gray-800 text-white"
                 )}>
                   <Link to="/jogos">
                     <Calendar className="h-5 w-5" />
@@ -98,7 +98,7 @@ const Sidebar = () => {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={cn(
                   "flex items-center gap-3 px-4 py-2 rounded-full",
-                  isActive('/admin') && "bg-primary text-primary-foreground"
+                  isActive('/admin') && "bg-gray-800 text-white"
                 )}>
                   <Link to="/admin">
                     <Settings className="h-5 w-5" />

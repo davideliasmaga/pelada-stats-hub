@@ -8,8 +8,8 @@ interface LogoProps {
 export const LogoWhiteBg: React.FC<LogoProps> = ({ className = "h-12 w-12" }) => {
   return (
     <img 
-      src="/lovable-uploads/e980f1c4-4a1a-4a1e-b296-d3bc210520f0.png" 
-      alt="Pelada Sagaz Logo (Light)" 
+      src="/lovable-uploads/371657d0-4c0d-440c-af94-135d65164cd1.png" 
+      alt="Pelada Sagaz Logo" 
       className={className} 
     />
   );

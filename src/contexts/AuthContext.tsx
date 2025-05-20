@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '@/types';
+import { User, UserRole } from '@/types';
 import { useUser } from './UserContext';
 import { toast } from 'sonner';
 
@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   createPassword: (email: string, token: string, password: string) => Promise<boolean>;
+  requestPasswordReset: (email: string) => Promise<boolean>;
 }
 
 // Mock users database with passwords
@@ -16,15 +17,16 @@ interface UserAuth {
   email: string;
   password: string;
   userId: string;
-  inviteToken?: string;
+  resetToken?: string;
+  role: UserRole;
 }
 
 // Initial mock auth data
 const initialAuthUsers: UserAuth[] = [
-  { email: 'admin@example.com', password: 'admin123', userId: '1' },
-  { email: 'mensalista@example.com', password: 'mensalista123', userId: '2' },
-  { email: 'viewer@example.com', password: 'viewer123', userId: '3' },
-  { email: 'davideliasmagalhaes@gmail.com', password: 'admin123', userId: '6' },
+  { email: 'admin@example.com', password: 'admin123', userId: '1', role: 'admin' },
+  { email: 'mensalista@example.com', password: 'mensalista123', userId: '2', role: 'mensalista' },
+  { email: 'viewer@example.com', password: 'viewer123', userId: '3', role: 'viewer' },
+  { email: 'davideliasmagalhaes@gmail.com', password: 'admin123', userId: '6', role: 'admin' },
 ];
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -95,26 +97,62 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast.info('Você foi desconectado');
   };
 
+  const requestPasswordReset = async (email: string): Promise<boolean> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Find user by email
+    const userIndex = authUsers.findIndex(
+      user => user.email.toLowerCase() === email.toLowerCase()
+    );
+
+    if (userIndex === -1) {
+      // Don't reveal if email exists or not for security
+      toast.success('Se este email estiver cadastrado, você receberá um link para redefinir sua senha.');
+      return true;
+    }
+
+    // Generate a random token
+    const token = Math.random().toString(36).substring(2, 15);
+    
+    // Update user with reset token
+    const updatedAuthUsers = [...authUsers];
+    updatedAuthUsers[userIndex] = {
+      ...updatedAuthUsers[userIndex],
+      resetToken: token
+    };
+
+    setAuthUsers(updatedAuthUsers);
+
+    // In a real app, this would send an email with the reset link
+    const baseUrl = window.location.origin;
+    const resetLink = `${baseUrl}/create-password?email=${encodeURIComponent(email)}&token=${token}`;
+    console.log('Reset link (in real app, this would be sent via email):', resetLink);
+
+    toast.success('Se este email estiver cadastrado, você receberá um link para redefinir sua senha.');
+    return true;
+  };
+
   const createPassword = async (email: string, token: string, password: string): Promise<boolean> => {
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    // Find user invitation with matching email and token
+    // Find user with matching email and token
     const userIndex = authUsers.findIndex(
-      user => user.email.toLowerCase() === email.toLowerCase() && user.inviteToken === token
+      user => user.email.toLowerCase() === email.toLowerCase() && user.resetToken === token
     );
 
     if (userIndex === -1) {
-      toast.error('Link de convite inválido ou expirado');
+      toast.error('Link inválido ou expirado');
       return false;
     }
 
-    // Update user with new password and remove invite token
+    // Update user with new password and remove reset token
     const updatedAuthUsers = [...authUsers];
     updatedAuthUsers[userIndex] = {
       ...updatedAuthUsers[userIndex],
       password,
-      inviteToken: undefined
+      resetToken: undefined
     };
 
     setAuthUsers(updatedAuthUsers);
@@ -123,7 +161,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isLoading, login, logout, createPassword }}>
+    <AuthContext.Provider value={{ 
+      isLoggedIn, 
+      isLoading, 
+      login, 
+      logout, 
+      createPassword,
+      requestPasswordReset 
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -26,11 +25,12 @@ import { UserRole } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, Copy, UserPlus } from "lucide-react";
+import { Check, Copy, UserPlus, Loader2 } from "lucide-react";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Mock users data for this page
 const initialUsers = [
@@ -69,11 +69,10 @@ type NewUserFormValues = z.infer<typeof newUserSchema>;
 
 const Admin = () => {
   const { isAdmin, currentUser } = useUser();
+  const { requestPasswordReset } = useAuth();
   const [users, setUsers] = useState(initialUsers);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [inviteLink, setInviteLink] = useState("");
-  const [showInviteLink, setShowInviteLink] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
   
   // Form for inviting new users
   const form = useForm<NewUserFormValues>({
@@ -104,51 +103,36 @@ const Admin = () => {
     toast.success(`Permissão de usuário alterada para ${newRole}`);
   };
   
-  const handleInviteUser = (values: NewUserFormValues) => {
+  const handleInviteUser = async (values: NewUserFormValues) => {
     // Check if email already exists
     if (users.some(user => user.email === values.email)) {
       toast.error("Este email já está cadastrado");
       return;
     }
     
-    // Add new user
-    const newUser = {
-      id: `${users.length + 1}`,
-      name: values.name,
-      email: values.email,
-      role: values.role,
-    };
-    
-    setUsers([...users, newUser]);
-    
-    // Generate a random token for the invitation link
-    const token = Math.random().toString(36).substring(2, 15);
-    
-    // Create invitation link
-    // In a real app, this would create an entry in the database with the token
-    const baseUrl = window.location.origin;
-    const link = `${baseUrl}/create-password?email=${encodeURIComponent(values.email)}&token=${token}`;
-    
-    setInviteLink(link);
-    setShowInviteLink(true);
-  };
-  
-  const copyInviteLink = () => {
-    navigator.clipboard.writeText(inviteLink)
-      .then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      })
-      .catch(() => {
-        toast.error("Falha ao copiar o link");
-      });
-  };
-  
-  const handleCloseInviteDialog = () => {
-    setInviteDialogOpen(false);
-    setShowInviteLink(false);
-    setInviteLink("");
-    form.reset();
+    setIsInviting(true);
+    try {
+      // Request password reset for the new user
+      const success = await requestPasswordReset(values.email);
+      
+      if (success) {
+        // Add new user to the list
+        const newUser = {
+          id: `${users.length + 1}`,
+          name: values.name,
+          email: values.email,
+          role: values.role,
+        };
+        
+        setUsers([...users, newUser]);
+        setInviteDialogOpen(false);
+        form.reset();
+        
+        toast.success("Convite enviado com sucesso! O usuário receberá um email para criar sua senha.");
+      }
+    } finally {
+      setIsInviting(false);
+    }
   };
 
   return (
@@ -165,120 +149,94 @@ const Admin = () => {
               </Button>
             </DialogTrigger>
             <DialogContent>
-              {!showInviteLink ? (
-                <>
-                  <DialogHeader>
-                    <DialogTitle>Convidar Novo Usuário</DialogTitle>
-                  </DialogHeader>
+              <DialogHeader>
+                <DialogTitle>Convidar Novo Usuário</DialogTitle>
+                <DialogDescription>
+                  O usuário receberá um email para criar sua senha.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleInviteUser)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nome do usuário" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleInviteUser)} className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Nome do usuário" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input placeholder="email@exemplo.com" type="email" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="role"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Permissão</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecionar permissão" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="mensalista">Mensalista</SelectItem>
-                                <SelectItem value="viewer">Viewer</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <DialogFooter className="pt-4">
-                        <Button type="submit" className="bg-gray-900 hover:bg-gray-800">
-                          Convidar
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </Form>
-                </>
-              ) : (
-                <>
-                  <DialogHeader>
-                    <DialogTitle>Usuário Convidado</DialogTitle>
-                    <DialogDescription>
-                      Compartilhe este link com o usuário para que ele possa criar sua senha.
-                    </DialogDescription>
-                  </DialogHeader>
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="email@exemplo.com" type="email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   
-                  <div className="space-y-4 my-4">
-                    <div className="relative">
-                      <Input 
-                        value={inviteLink} 
-                        readOnly 
-                        className="pr-10 font-mono text-xs" 
-                      />
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="absolute right-0 top-0" 
-                        onClick={copyInviteLink}
-                      >
-                        {copied ? 
-                          <Check className="h-4 w-4 text-green-500" /> : 
-                          <Copy className="h-4 w-4" />
-                        }
-                      </Button>
-                    </div>
-                    <p className="text-sm text-gray-500">
-                      Este link é válido apenas uma vez. Assim que o usuário criar sua senha, o link expirará.
-                    </p>
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Permissão</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecionar permissão" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="mensalista">Mensalista</SelectItem>
+                            <SelectItem value="viewer">Viewer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   
-                  <DialogFooter>
-                    <Button 
-                      type="button" 
-                      className="bg-gray-900 hover:bg-gray-800"
-                      onClick={handleCloseInviteDialog}
+                  <DialogFooter className="pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setInviteDialogOpen(false)}
                     >
-                      Fechar
+                      Cancelar
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      className="bg-gray-900 hover:bg-gray-800"
+                      disabled={isInviting}
+                    >
+                      {isInviting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Enviando convite...
+                        </>
+                      ) : (
+                        "Convidar"
+                      )}
                     </Button>
                   </DialogFooter>
-                </>
-              )}
+                </form>
+              </Form>
             </DialogContent>
           </Dialog>
         </div>

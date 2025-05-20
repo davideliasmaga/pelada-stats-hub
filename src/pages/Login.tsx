@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -18,6 +17,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { MailIcon, LockIcon } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
@@ -27,8 +34,11 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
-  const { isLoggedIn, isLoading, login } = useAuth();
+  const { isLoggedIn, isLoading, login, requestPasswordReset } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -66,6 +76,19 @@ const Login = () => {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleRequestReset = async () => {
+    if (!resetEmail) return;
+    
+    setIsResetting(true);
+    try {
+      await requestPasswordReset(resetEmail);
+      setResetDialogOpen(false);
+      setResetEmail("");
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -126,20 +149,74 @@ const Login = () => {
                 )}
               />
               
-              <Button 
-                type="submit" 
-                className="w-full bg-gray-900 hover:bg-gray-800"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Entrando...
-                  </>
-                ) : (
-                  "Entrar"
-                )}
-              </Button>
+              <div className="space-y-4">
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gray-900 hover:bg-gray-800"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Entrando...
+                    </>
+                  ) : (
+                    "Entrar"
+                  )}
+                </Button>
+
+                <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      type="button" 
+                      variant="link" 
+                      className="w-full text-gray-600 hover:text-gray-900"
+                    >
+                      Esqueci minha senha
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Redefinir Senha</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <p className="text-sm text-gray-500">
+                        Digite seu email para receber um link de redefinição de senha.
+                      </p>
+                      <Input
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setResetDialogOpen(false)}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        type="button"
+                        className="bg-gray-900 hover:bg-gray-800"
+                        onClick={handleRequestReset}
+                        disabled={isResetting || !resetEmail}
+                      >
+                        {isResetting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Enviando...
+                          </>
+                        ) : (
+                          "Enviar Link"
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </form>
           </Form>
         </div>

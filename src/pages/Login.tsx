@@ -165,57 +165,68 @@ const Login = () => {
                   )}
                 </Button>
 
-                <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      type="button" 
-                      variant="link" 
-                      className="w-full text-gray-600 hover:text-gray-900"
-                    >
-                      Esqueci minha senha
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Redefinir Senha</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <p className="text-sm text-gray-500">
-                        Digite seu email para receber um link de redefinição de senha.
-                      </p>
-                      <Input
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={resetEmail}
-                        onChange={(e) => setResetEmail(e.target.value)}
-                      />
-                    </div>
-                    <DialogFooter>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setResetDialogOpen(false)}
+                <div className="flex flex-col gap-2">
+                  <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        type="button" 
+                        variant="link" 
+                        className="w-full text-gray-600 hover:text-gray-900"
                       >
-                        Cancelar
+                        Esqueci minha senha
                       </Button>
-                      <Button
-                        type="button"
-                        className="bg-gray-900 hover:bg-gray-800"
-                        onClick={handleRequestReset}
-                        disabled={isResetting || !resetEmail}
-                      >
-                        {isResetting ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Enviando...
-                          </>
-                        ) : (
-                          "Enviar Link"
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Redefinir Senha</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <p className="text-sm text-gray-500">
+                          Digite seu email para receber um link de redefinição de senha.
+                        </p>
+                        <Input
+                          type="email"
+                          placeholder="seu@email.com"
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
+                        />
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setResetDialogOpen(false)}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          type="button"
+                          className="bg-gray-900 hover:bg-gray-800"
+                          onClick={handleRequestReset}
+                          disabled={isResetting || !resetEmail}
+                        >
+                          {isResetting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Enviando...
+                            </>
+                          ) : (
+                            "Enviar Link"
+                          )}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="w-full text-gray-600 hover:text-gray-900"
+                    onClick={() => navigate("/register")}
+                  >
+                    Criar uma conta
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>

@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +14,7 @@ import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import CreatePassword from "./pages/CreatePassword";
+import Register from "./pages/Register";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +52,7 @@ const App = () => (
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/create-password" element={<CreatePassword />} />
+              <Route path="/register" element={<Register />} />
               
               {/* Protected routes */}
               <Route path="/" element={

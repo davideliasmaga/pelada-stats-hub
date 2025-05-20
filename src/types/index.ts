@@ -1,4 +1,3 @@
-
 export type UserRole = 'admin' | 'mensalista' | 'viewer';
 
 export type PlayerPosition = 'atacante' | 'defensor' | 'meia' | 'flexivel';
@@ -40,6 +39,7 @@ export interface Transaction {
 export interface User {
   id: string;
   name: string;
+  email: string;
   role: UserRole;
   avatar?: string;
 }

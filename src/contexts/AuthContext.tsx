@@ -10,6 +10,10 @@ interface AuthContextType {
   logout: () => void;
   createPassword: (email: string, token: string, password: string) => Promise<boolean>;
   requestPasswordReset: (email: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string) => Promise<boolean>;
+  approveUser: (userId: string, role: UserRole) => Promise<boolean>;
+  rejectUser: (userId: string) => Promise<boolean>;
+  getPendingUsers: () => Promise<User[]>;
 }
 
 // Mock users database with passwords
@@ -19,14 +23,25 @@ interface UserAuth {
   userId: string;
   resetToken?: string;
   role: UserRole;
+  isApproved: boolean;
 }
 
 // Initial mock auth data
 const initialAuthUsers: UserAuth[] = [
-  { email: 'admin@example.com', password: 'admin123', userId: '1', role: 'admin' },
-  { email: 'mensalista@example.com', password: 'mensalista123', userId: '2', role: 'mensalista' },
-  { email: 'viewer@example.com', password: 'viewer123', userId: '3', role: 'viewer' },
-  { email: 'davideliasmagalhaes@gmail.com', password: 'admin123', userId: '6', role: 'admin' },
+  { email: 'admin@example.com', password: 'admin123', userId: '1', role: 'admin', isApproved: true },
+  { email: 'mensalista@example.com', password: 'mensalista123', userId: '2', role: 'mensalista', isApproved: true },
+  { email: 'viewer@example.com', password: 'viewer123', userId: '3', role: 'viewer', isApproved: true },
+  { email: 'davideliasmagalhaes@gmail.com', password: 'admin123', userId: '6', role: 'admin', isApproved: true },
+];
+
+// Mock users data
+const initialUsers: User[] = [
+  { id: '1', name: 'Admin User', email: 'admin@example.com', role: 'admin', avatar: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?ixlib=rb-1.2.1&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=200&fit=max&ixid=eyJhcHBfaWQiOjE3Nzg0fQ' },
+  { id: '2', name: 'Mensalista User', email: 'mensalista@example.com', role: 'mensalista' },
+  { id: '3', name: 'Viewer User', email: 'viewer@example.com', role: 'viewer' },
+  { id: '4', name: 'John Doe', email: 'john@example.com', role: 'mensalista' },
+  { id: '5', name: 'Jane Smith', email: 'jane@example.com', role: 'viewer' },
+  { id: '6', name: 'David Elias', email: 'davideliasmagalhaes@gmail.com', role: 'admin' },
 ];
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,6 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [authUsers, setAuthUsers] = useState<UserAuth[]>(initialAuthUsers);
+  const [users, setUsers] = useState<User[]>(initialUsers);
   const { setCurrentUser } = useUser();
 
   // Check if user is already logged in on mount
@@ -57,28 +73,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await new Promise(resolve => setTimeout(resolve, 800));
 
     const userAuth = authUsers.find(
-      user => user.email.toLowerCase() === email.toLowerCase() && user.password === password
+      user => user.email.toLowerCase() === email.toLowerCase() && 
+             user.password === password &&
+             user.isApproved
     );
 
     if (!userAuth) {
-      toast.error('Email ou senha inválidos');
+      if (authUsers.find(user => user.email.toLowerCase() === email.toLowerCase() && !user.isApproved)) {
+        toast.error('Sua conta ainda está aguardando aprovação');
+      } else {
+        toast.error('Email ou senha inválidos');
+      }
       return false;
     }
 
-    // Find user data from our mock database
-    const mockUsers = [
-      { id: '1', name: 'Admin User', role: 'admin' as const, avatar: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?ixlib=rb-1.2.1&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=200&fit=max&ixid=eyJhcHBfaWQiOjE3Nzg0fQ' },
-      { id: '2', name: 'Mensalista User', role: 'mensalista' as const },
-      { id: '3', name: 'Viewer User', role: 'viewer' as const },
-      { id: '4', name: 'John Doe', role: 'mensalista' as const },
-      { id: '5', name: 'Jane Smith', role: 'viewer' as const },
-      { id: '6', name: 'David Elias', role: 'admin' as const },
-    ];
-
-    const userData = mockUsers.find(user => user.id === userAuth.userId);
+    const userData = users.find(user => user.id === userAuth.userId);
     
     if (userData) {
-      // Store in context and localStorage
       setCurrentUser(userData);
       localStorage.setItem('currentUser', JSON.stringify(userData));
       setIsLoggedIn(true);
@@ -88,6 +99,103 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     toast.error('Erro ao recuperar dados do usuário');
     return false;
+  };
+
+  const register = async (name: string, email: string, password: string): Promise<boolean> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Check if email already exists
+    if (authUsers.some(user => user.email.toLowerCase() === email.toLowerCase())) {
+      toast.error('Este email já está cadastrado');
+      return false;
+    }
+
+    // Generate a new user ID
+    const newUserId = (Math.max(...users.map(u => parseInt(u.id))) + 1).toString();
+
+    // Create new user
+    const newUser: User = {
+      id: newUserId,
+      name,
+      email,
+      role: 'viewer', // Default role, will be changed upon approval
+    };
+
+    // Create new auth entry
+    const newAuthUser: UserAuth = {
+      userId: newUserId,
+      email,
+      password,
+      role: 'viewer',
+      isApproved: false,
+    };
+
+    // Add to our mock database
+    setUsers([...users, newUser]);
+    setAuthUsers([...authUsers, newAuthUser]);
+
+    return true;
+  };
+
+  const approveUser = async (userId: string, role: UserRole): Promise<boolean> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const userIndex = users.findIndex(u => u.id === userId);
+    const authIndex = authUsers.findIndex(u => u.userId === userId);
+
+    if (userIndex === -1 || authIndex === -1) {
+      toast.error('Usuário não encontrado');
+      return false;
+    }
+
+    // Update user role and approval status
+    const updatedUsers = [...users];
+    updatedUsers[userIndex] = { ...updatedUsers[userIndex], role };
+
+    const updatedAuthUsers = [...authUsers];
+    updatedAuthUsers[authIndex] = { ...updatedAuthUsers[authIndex], role, isApproved: true };
+
+    setUsers(updatedUsers);
+    setAuthUsers(updatedAuthUsers);
+
+    toast.success('Usuário aprovado com sucesso');
+    return true;
+  };
+
+  const rejectUser = async (userId: string): Promise<boolean> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const userIndex = users.findIndex(u => u.id === userId);
+    const authIndex = authUsers.findIndex(u => u.userId === userId);
+
+    if (userIndex === -1 || authIndex === -1) {
+      toast.error('Usuário não encontrado');
+      return false;
+    }
+
+    // Remove user from both arrays
+    const updatedUsers = users.filter(u => u.id !== userId);
+    const updatedAuthUsers = authUsers.filter(u => u.userId !== userId);
+
+    setUsers(updatedUsers);
+    setAuthUsers(updatedAuthUsers);
+
+    toast.success('Usuário rejeitado com sucesso');
+    return true;
+  };
+
+  const getPendingUsers = async (): Promise<User[]> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const pendingUserIds = authUsers
+      .filter(u => !u.isApproved)
+      .map(u => u.userId);
+
+    return users.filter(u => pendingUserIds.includes(u.id));
   };
 
   const logout = () => {
@@ -161,20 +269,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      isLoggedIn, 
-      isLoading, 
-      login, 
-      logout, 
+    <AuthContext.Provider value={{
+      isLoggedIn,
+      isLoading,
+      login,
+      logout,
       createPassword,
-      requestPasswordReset 
+      requestPasswordReset,
+      register,
+      approveUser,
+      rejectUser,
+      getPendingUsers,
     }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = (): AuthContextType => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');

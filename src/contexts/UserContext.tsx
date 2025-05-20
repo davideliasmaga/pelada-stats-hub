@@ -1,7 +1,6 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-export type UserRole = 'admin' | 'mensalista' | 'viewer';
+import { UserRole } from '@/types';
 
 interface User {
   id: string;
@@ -28,9 +27,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     avatar: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?ixlib=rb-1.2.1&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=200&fit=max&ixid=eyJhcHBfaWQiOjE3Nzg0fQ'
   });
 
+  // User role checks
+  // isAdmin = user has admin role
+  // isMensalista = user has mensalista OR admin role
+  // isViewer = all users have at least viewer access
   const isAdmin = currentUser?.role === 'admin';
   const isMensalista = currentUser?.role === 'mensalista' || isAdmin;
-  const isViewer = currentUser?.role === 'viewer' || isMensalista || isAdmin;
+  const isViewer = true; // All authenticated users have at least viewer access
 
   return (
     <UserContext.Provider value={{ currentUser, setCurrentUser, isAdmin, isMensalista, isViewer }}>

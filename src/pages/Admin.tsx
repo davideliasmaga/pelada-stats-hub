@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -10,20 +10,30 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import MainLayout from "@/components/layout/MainLayout";
 import { useUser } from "@/contexts/UserContext";
 import { Navigate } from "react-router-dom";
+import { UserRole } from "@/types";
 
 // Mock users data for this page
-const mockUsers = [
-  { id: "1", name: "Admin User", email: "admin@example.com", role: "admin" },
-  { id: "2", name: "Mensalista User", email: "mensalista@example.com", role: "mensalista" },
-  { id: "3", name: "Viewer User", email: "viewer@example.com", role: "viewer" },
-  { id: "4", name: "John Doe", email: "john@example.com", role: "mensalista" },
-  { id: "5", name: "Jane Smith", email: "jane@example.com", role: "viewer" },
+const initialUsers = [
+  { id: "1", name: "Admin User", email: "admin@example.com", role: "admin" as UserRole },
+  { id: "2", name: "Mensalista User", email: "mensalista@example.com", role: "mensalista" as UserRole },
+  { id: "3", name: "Viewer User", email: "viewer@example.com", role: "viewer" as UserRole },
+  { id: "4", name: "John Doe", email: "john@example.com", role: "mensalista" as UserRole },
+  { id: "5", name: "Jane Smith", email: "jane@example.com", role: "viewer" as UserRole },
 ];
 
-const getRoleBadge = (role: string) => {
+const getRoleBadge = (role: UserRole) => {
   switch (role) {
     case "admin":
       return <Badge className="bg-gray-900">Admin</Badge>;
@@ -37,12 +47,27 @@ const getRoleBadge = (role: string) => {
 };
 
 const Admin = () => {
-  const { isAdmin } = useUser();
+  const { isAdmin, currentUser } = useUser();
+  const [users, setUsers] = useState(initialUsers);
   
   // Redirect if not admin
   if (!isAdmin) {
     return <Navigate to="/" />;
   }
+
+  const handleRoleChange = (userId: string, newRole: UserRole) => {
+    // Don't allow changing your own role
+    if (userId === currentUser?.id) {
+      toast.error("Você não pode alterar sua própria permissão");
+      return;
+    }
+    
+    setUsers(users.map(user => 
+      user.id === userId ? { ...user, role: newRole } : user
+    ));
+    
+    toast.success(`Permissão de usuário alterada para ${newRole}`);
+  };
 
   return (
     <MainLayout>
@@ -62,14 +87,34 @@ const Admin = () => {
                   <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Permissão</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mockUsers.map((user) => (
+                {users.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
+                    <TableCell>
+                      {user.id !== currentUser?.id ? (
+                        <Select 
+                          defaultValue={user.role}
+                          onValueChange={(value) => handleRoleChange(user.id, value as UserRole)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue placeholder="Selecionar permissão" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="mensalista">Mensalista</SelectItem>
+                            <SelectItem value="viewer">Viewer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Button variant="outline" disabled>Usuário atual</Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -211,18 +211,19 @@ export const getTopScorers = (
     .sort((a, b) => b.goals - a.goals) as Array<{ player: Player; goals: number }>;
 };
 
-export const generateBalancedTeams = (playerIds: string[], numTeams: number): Player[][] => {
-  // Simple implementation for team balancing
-  const selectedPlayers = players.filter(p => playerIds.includes(p.id));
+export const generateBalancedTeams = (playerIds: string[], numTeams: number = 4): Player[][] => {
+  if (playerIds.length < numTeams) {
+    return [];
+  }
   
-  // Sort by rating
-  const sortedPlayers = [...selectedPlayers].sort((a, b) => b.rating - a.rating);
+  // Get selected players
+  const selectedPlayers = players.filter(p => playerIds.includes(p.id));
   
   // Initialize teams
   const teams: Player[][] = Array.from({ length: numTeams }, () => []);
   
-  // First, assign defenders to ensure each team has at least one
-  const defenders = sortedPlayers.filter(p => p.position === 'defensor');
+  // First, distribute defenders to ensure each team has at least one
+  const defenders = selectedPlayers.filter(p => p.position === 'defensor');
   defenders.forEach((defender, index) => {
     if (index < numTeams) {
       teams[index % numTeams].push(defender);
@@ -230,11 +231,25 @@ export const generateBalancedTeams = (playerIds: string[], numTeams: number): Pl
   });
   
   // Remove assigned defenders from the pool
-  const remainingPlayers = sortedPlayers.filter(
-    p => !defenders.slice(0, numTeams).includes(p)
+  const assignedDefenders = defenders.slice(0, numTeams);
+  let remainingPlayers = selectedPlayers.filter(
+    p => !assignedDefenders.some(d => d.id === p.id)
   );
   
-  // Use snake draft to balance teams
+  // Segregate players who don't run
+  const nonRunners = remainingPlayers.filter(p => p.running === 'nao');
+  remainingPlayers = remainingPlayers.filter(p => p.running !== 'nao');
+  
+  // Sort remaining players by rating (high to low)
+  remainingPlayers.sort((a, b) => b.rating - a.rating);
+  
+  // Distribute non-runners across teams (at most 1 per team if possible)
+  nonRunners.forEach((player, index) => {
+    teams[index % numTeams].push(player);
+  });
+  
+  // Use snake draft to distribute the rest to balance team strength
+  // Order: Team 0 -> 1 -> 2 -> 3 -> 3 -> 2 -> 1 -> 0 -> 0 -> ...
   let direction = 1;
   let currentTeam = 0;
   
@@ -250,6 +265,15 @@ export const generateBalancedTeams = (playerIds: string[], numTeams: number): Pl
       currentTeam = 0;
     }
   });
+  
+  // Calculate and log team balance statistics (for debugging)
+  const teamStats = teams.map(team => ({
+    avgRating: team.reduce((sum, p) => sum + p.rating, 0) / team.length,
+    defenders: team.filter(p => p.position === 'defensor').length,
+    nonRunners: team.filter(p => p.running === 'nao').length
+  }));
+  
+  console.log('Team balance stats:', teamStats);
   
   return teams;
 };

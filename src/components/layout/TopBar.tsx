@@ -1,6 +1,7 @@
 
 import React from "react";
 import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   DropdownMenu,
@@ -14,9 +15,11 @@ import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { UserRole } from "@/types";
 import { LogoWhiteBg } from "@/assets/logo-white-bg";
+import { LogOut, User } from "lucide-react";
 
 const TopBar = () => {
   const { currentUser, setCurrentUser } = useUser();
+  const { logout } = useAuth();
   
   const handleRoleChange = (role: UserRole) => {
     if (currentUser) {
@@ -81,10 +84,18 @@ const TopBar = () => {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Perfil</DropdownMenuItem>
-            <DropdownMenuItem>Configurações</DropdownMenuItem>
+            <DropdownMenuItem className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Perfil
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Sair</DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={logout} 
+              className="text-red-600 flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sair
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

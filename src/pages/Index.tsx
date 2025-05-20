@@ -1,0 +1,213 @@
+
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { PieChart, BarChart, Settings, Award } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { getTopScorers, getTotalBalance } from "@/services/dataService";
+import MainLayout from "@/components/layout/MainLayout";
+import { useUser } from "@/contexts/UserContext";
+import { LogoWhiteBg } from "@/assets/logo-white-bg";
+import { startOfQuarter, endOfQuarter } from "date-fns";
+
+const Index = () => {
+  const navigate = useNavigate();
+  const { isAdmin, isMensalista } = useUser();
+  const [topScorers, setTopScorers] = useState<Array<{ player: any; goals: number }>>([]);
+  const balance = getTotalBalance();
+
+  useEffect(() => {
+    // Get top scorers for the current quarter
+    const today = new Date();
+    const quarterStart = startOfQuarter(today);
+    const quarterEnd = endOfQuarter(today);
+    
+    const dateRangeObj = {
+      start: quarterStart.toISOString(),
+      end: quarterEnd.toISOString()
+    };
+    
+    setTopScorers(getTopScorers(dateRangeObj).slice(0, 3));
+  }, []);
+
+  const getPlayerInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+  
+  const topScorer = topScorers.length > 0 ? topScorers[0] : null;
+
+  return (
+    <MainLayout>
+      <div className="container mx-auto space-y-8">
+        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+          <div className="flex items-center gap-3">
+            <LogoWhiteBg className="h-12 w-12 animate-bounce-subtle" />
+            <h1 className="text-4xl font-bold text-gray-900">Pelada Sagaz</h1>
+          </div>
+          <p className="text-xl text-gray-600 text-center max-w-lg">
+            Gerencie suas peladas, acompanhe estatísticas e organize seus jogadores!
+          </p>
+        </div>
+
+        {topScorer && (
+          <div className="mb-8">
+            <Card className="overflow-hidden">
+              <div className="bg-gradient-to-r from-gray-900 to-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Award className="h-5 w-5 text-yellow-400" />
+                    Artilheiro do Trimestre
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col md:flex-row items-center gap-6 py-4">
+                    <div className="relative">
+                      <Avatar className="h-28 w-28 border-4 border-white shadow-lg">
+                        {topScorer.player.photo ? (
+                          <AvatarImage 
+                            src={topScorer.player.photo} 
+                            alt={topScorer.player.name}
+                            className="object-cover" 
+                          />
+                        ) : (
+                          <AvatarFallback className="text-4xl bg-gray-200 text-gray-700">
+                            {getPlayerInitials(topScorer.player.name)}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <div className="absolute -bottom-2 -right-2 bg-yellow-500 rounded-full w-10 h-10 flex items-center justify-center border-2 border-white text-lg font-bold">
+                        1º
+                      </div>
+                    </div>
+                    
+                    <div className="text-center md:text-left text-white">
+                      <h2 className="text-2xl font-bold">{topScorer.player.name}</h2>
+                      <div className="mt-2">
+                        <span className="bg-yellow-500 text-black px-3 py-1 rounded-full font-bold">
+                          {topScorer.goals} gols
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="bg-gray-800/50">
+                  <Button 
+                    onClick={() => navigate('/artilharia')} 
+                    variant="outline" 
+                    className="w-full bg-white hover:bg-gray-100"
+                  >
+                    Ver artilharia completa
+                  </Button>
+                </CardFooter>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart className="h-5 w-5 text-gray-500" />
+                Artilharia
+              </CardTitle>
+              <CardDescription>Top 3 artilheiros</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3">
+                {topScorers.map(({ player, goals }, index) => (
+                  <li key={player.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center">
+                        <Avatar className="h-8 w-8 mr-2">
+                          {player.photo ? (
+                            <AvatarImage src={player.photo} alt={player.name} />
+                          ) : (
+                            <AvatarFallback>
+                              {getPlayerInitials(player.name)}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <span>{player.name}</span>
+                      </div>
+                    </div>
+                    <span className="font-bold">{goals} gols</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                onClick={() => navigate('/artilharia')} 
+                variant="outline" 
+                className="w-full"
+              >
+                Ver artilharia completa
+              </Button>
+            </CardFooter>
+          </Card>
+
+          {isMensalista && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChart className="h-5 w-5 text-gray-500" />
+                  Financeiro
+                </CardTitle>
+                <CardDescription>Resumo financeiro</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center justify-center h-[100px]">
+                  <p className="text-sm">Saldo atual</p>
+                  <h3 className={`text-2xl font-bold ${balance >= 0 ? 'text-gray-900' : 'text-red-500'}`}>
+                    R$ {balance.toFixed(2)}
+                  </h3>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={() => navigate('/financeiro')} 
+                  variant="outline" 
+                  className="w-full"
+                >
+                  Ver detalhes financeiros
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+
+          {isAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5 text-gray-500" />
+                  Administração
+                </CardTitle>
+                <CardDescription>Acesso rápido</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button onClick={() => navigate('/jogadores')} variant="outline" className="w-full">
+                  Gerenciar Jogadores
+                </Button>
+                <Button onClick={() => navigate('/jogos')} variant="outline" className="w-full">
+                  Gerenciar Jogos
+                </Button>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  onClick={() => navigate('/admin')} 
+                  className="w-full bg-gray-900 hover:bg-gray-800"
+                >
+                  Painel de Administração
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+        </div>
+      </div>
+    </MainLayout>
+  );
+};
+
+export default Index;

@@ -176,6 +176,10 @@ export const createTransaction = (transaction: Omit<Transaction, 'id'>): Transac
   return newTransaction;
 };
 
+export const clearTransactions = (): void => {
+  transactions.length = 0; // This empties the array without creating a new reference
+};
+
 // Top Scorers and Statistics
 export const getTopScorers = (
   period?: { start: string; end: string },

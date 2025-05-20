@@ -27,7 +27,8 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
-import { Plus } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Plus, User, Image } from "lucide-react";
 import { getPlayers, createPlayer, deletePlayer } from "@/services/dataService";
 import { Player, PlayerPosition, RunningAbility } from "@/types";
 import { useUser } from "@/contexts/UserContext";
@@ -44,6 +45,7 @@ const Jogadores = () => {
   const [playerPosition, setPlayerPosition] = useState<PlayerPosition>("flexivel");
   const [playerRunning, setPlayerRunning] = useState<RunningAbility>("medio");
   const [playerRating, setPlayerRating] = useState(7.5);
+  const [playerPhoto, setPlayerPhoto] = useState<string>("");
   
   useEffect(() => {
     setPlayers(getPlayers());
@@ -61,7 +63,8 @@ const Jogadores = () => {
       name: playerName,
       position: playerPosition,
       running: playerRunning,
-      rating: playerRating
+      rating: playerRating,
+      photo: playerPhoto
     });
 
     setPlayers([...players, newPlayer]);
@@ -71,7 +74,19 @@ const Jogadores = () => {
     setPlayerPosition("flexivel");
     setPlayerRunning("medio");
     setPlayerRating(7.5);
+    setPlayerPhoto("");
     setDialogOpen(false);
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPlayerPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleDeletePlayer = (id: string) => {
@@ -99,6 +114,10 @@ const Jogadores = () => {
     }
   };
 
+  const getPlayerInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto space-y-8">
@@ -118,6 +137,33 @@ const Jogadores = () => {
               </DialogHeader>
               
               <div className="grid gap-4 py-4">
+                <div className="flex justify-center mb-4">
+                  <div className="relative">
+                    <Avatar className="h-24 w-24">
+                      {playerPhoto ? (
+                        <AvatarImage src={playerPhoto} alt="Player" />
+                      ) : (
+                        <AvatarFallback className="bg-gray-200">
+                          <User className="h-12 w-12 text-gray-500" />
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <label 
+                      htmlFor="photo-upload" 
+                      className="absolute -bottom-2 -right-2 bg-gray-900 rounded-full p-1 cursor-pointer hover:bg-gray-700 transition-colors"
+                    >
+                      <Image className="h-4 w-4 text-white" />
+                      <input 
+                        id="photo-upload" 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={handlePhotoChange}
+                      />
+                    </label>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome</Label>
                   <Input
@@ -202,6 +248,7 @@ const Jogadores = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Foto</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Posição</TableHead>
                   <TableHead>Corre</TableHead>
@@ -212,6 +259,17 @@ const Jogadores = () => {
               <TableBody>
                 {players.map((player) => (
                   <TableRow key={player.id}>
+                    <TableCell>
+                      <Avatar>
+                        {player.photo ? (
+                          <AvatarImage src={player.photo} alt={player.name} />
+                        ) : (
+                          <AvatarFallback>
+                            {getPlayerInitials(player.name)}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                    </TableCell>
                     <TableCell className="font-medium">{player.name}</TableCell>
                     <TableCell>{getPositionText(player.position)}</TableCell>
                     <TableCell>{getRunningText(player.running)}</TableCell>

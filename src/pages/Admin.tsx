@@ -32,7 +32,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
 
 // Mock users data for this page
 const initialUsers = [
@@ -71,11 +70,11 @@ type NewUserFormValues = z.infer<typeof newUserSchema>;
 
 const Admin = () => {
   const { currentUser } = useUser();
-  const { approveUser, rejectUser, getPendingUsers, users } = useAuth();
+  const { approveUser, rejectUser, getPendingUsers } = useAuth();
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedRoles, setSelectedRoles] = useState<Record<string, UserRole>>({});
-  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isApproving, setIsApproving] = useState<string | null>(null);
+  const [isRejecting, setIsRejecting] = useState<string | null>(null);
 
   // Redirect if not admin
   if (!currentUser || currentUser.role !== 'admin') {
@@ -87,78 +86,37 @@ const Admin = () => {
   }, []);
 
   const loadPendingUsers = async () => {
+    setIsLoading(true);
     try {
-      const pending = await getPendingUsers();
-      setPendingUsers(pending);
-      // Initialize selected roles for each pending user
-      const initialRoles = pending.reduce((acc, user) => ({
-        ...acc,
-        [user.id]: "viewer" as UserRole
-      }), {});
-      setSelectedRoles(initialRoles);
-    } catch (error) {
-      console.error("Error loading pending users:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os usuários pendentes",
-        variant: "destructive",
-      });
+      const users = await getPendingUsers();
+      setPendingUsers(users);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleApprove = async (userId: string) => {
+  const handleApprove = async (userId: string, role: UserRole) => {
+    setIsApproving(userId);
     try {
-      const selectedRole = selectedRoles[userId];
-      if (!selectedRole) {
-        toast({
-          title: "Erro",
-          description: "Selecione uma permissão para o usuário",
-          variant: "destructive",
-        });
-        return;
+      const success = await approveUser(userId, role);
+      if (success) {
+        await loadPendingUsers();
       }
-
-      await approveUser(userId, selectedRole);
-      await loadPendingUsers();
-      toast({
-        title: "Sucesso",
-        description: "Usuário aprovado com sucesso",
-      });
-    } catch (error) {
-      console.error("Error approving user:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível aprovar o usuário",
-        variant: "destructive",
-      });
+    } finally {
+      setIsApproving(null);
     }
   };
 
   const handleReject = async (userId: string) => {
+    setIsRejecting(userId);
     try {
-      await rejectUser(userId);
-      await loadPendingUsers();
-      toast({
-        title: "Sucesso",
-        description: "Usuário rejeitado com sucesso",
-      });
-    } catch (error) {
-      console.error("Error rejecting user:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível rejeitar o usuário",
-        variant: "destructive",
-      });
+      const success = await rejectUser(userId);
+      if (success) {
+        await loadPendingUsers();
+      }
+    } finally {
+      setIsRejecting(null);
     }
-  };
-
-  const handleRoleChange = (userId: string, role: UserRole) => {
-    setSelectedRoles(prev => ({
-      ...prev,
-      [userId]: role
-    }));
   };
 
   return (
@@ -166,22 +124,24 @@ const Admin = () => {
       <div className="space-y-6">
         <h1 className="text-3xl font-bold">Administração</h1>
 
-        <Tabs defaultValue="pending" className="space-y-4">
+        <Tabs defaultValue="pending-users" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="pending">Usuários Pendentes</TabsTrigger>
+            <TabsTrigger value="pending-users">Usuários Pendentes</TabsTrigger>
             <TabsTrigger value="users">Usuários</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="pending">
+          <TabsContent value="pending-users">
             <Card>
               <CardHeader>
                 <CardTitle>Usuários Pendentes de Aprovação</CardTitle>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <div className="text-center py-4">Carregando...</div>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                  </div>
                 ) : pendingUsers.length === 0 ? (
-                  <div className="text-center py-4 text-muted-foreground">
+                  <div className="text-center py-8 text-gray-500">
                     Não há usuários pendentes de aprovação
                   </div>
                 ) : (
@@ -190,7 +150,7 @@ const Admin = () => {
                       <TableRow>
                         <TableHead>Nome</TableHead>
                         <TableHead>Email</TableHead>
-                        <TableHead>Permissão</TableHead>
+                        <TableHead>Função</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -201,31 +161,35 @@ const Admin = () => {
                           <TableCell>{user.email}</TableCell>
                           <TableCell>
                             <Select
-                              value={selectedRoles[user.id]}
-                              onValueChange={(value) => handleRoleChange(user.id, value as UserRole)}
+                              defaultValue="viewer"
+                              onValueChange={(value) => handleApprove(user.id, value as UserRole)}
+                              disabled={isApproving === user.id || isRejecting === user.id}
                             >
                               <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Selecione a permissão" />
+                                <SelectValue placeholder="Selecione a função" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="admin">Administrador</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
                                 <SelectItem value="mensalista">Mensalista</SelectItem>
-                                <SelectItem value="viewer">Visualizador</SelectItem>
+                                <SelectItem value="viewer">Viewer</SelectItem>
                               </SelectContent>
                             </Select>
                           </TableCell>
-                          <TableCell className="text-right space-x-2">
-                            <Button
-                              variant="default"
-                              onClick={() => handleApprove(user.id)}
-                            >
-                              Aprovar
-                            </Button>
+                          <TableCell className="text-right">
                             <Button
                               variant="destructive"
+                              size="sm"
                               onClick={() => handleReject(user.id)}
+                              disabled={isApproving === user.id || isRejecting === user.id}
                             >
-                              Rejeitar
+                              {isRejecting === user.id ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Rejeitando...
+                                </>
+                              ) : (
+                                "Rejeitar"
+                              )}
                             </Button>
                           </TableCell>
                         </TableRow>

@@ -4,51 +4,34 @@ import { useUser } from './UserContext';
 import { toast } from 'sonner';
 
 interface AuthContextType {
-  user: UserAuth | null;
-  users: User[];
+  isLoggedIn: boolean;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  createPassword: (email: string, token: string, password: string) => Promise<boolean>;
+  requestPasswordReset: (email: string) => Promise<boolean>;
   register: (name: string, email: string, password: string) => Promise<boolean>;
   approveUser: (userId: string, role: UserRole) => Promise<boolean>;
   rejectUser: (userId: string) => Promise<boolean>;
   getPendingUsers: () => Promise<User[]>;
-  handlePasswordReset: (email: string) => Promise<boolean>;
 }
 
-interface UserAuth extends User {
+// Mock users database with passwords
+interface UserAuth {
+  email: string;
   password: string;
+  userId: string;
+  resetToken?: string;
+  role: UserRole;
   isApproved: boolean;
 }
 
-// Initial mock authentication data
+// Initial mock auth data
 const initialAuthUsers: UserAuth[] = [
-  {
-    id: "1",
-    name: "Admin User",
-    email: "davideliasmagalhaes@gmail.com",
-    role: "admin",
-    password: "admin123",
-    isApproved: true,
-    avatar: "https://api.dicebear.com/7.x/initials/svg?seed=Admin+User"
-  },
-  {
-    id: "2",
-    name: "Mensalista User",
-    email: "mensalista@example.com",
-    role: "mensalista",
-    password: "mensalista123",
-    isApproved: true,
-    avatar: "https://api.dicebear.com/7.x/initials/svg?seed=Mensalista+User"
-  },
-  {
-    id: "3",
-    name: "Viewer User",
-    email: "viewer@example.com",
-    role: "viewer",
-    password: "viewer123",
-    isApproved: true,
-    avatar: "https://api.dicebear.com/7.x/initials/svg?seed=Viewer+User"
-  }
+  { email: 'admin@example.com', password: 'admin123', userId: '1', role: 'admin', isApproved: true },
+  { email: 'mensalista@example.com', password: 'mensalista123', userId: '2', role: 'mensalista', isApproved: true },
+  { email: 'viewer@example.com', password: 'viewer123', userId: '3', role: 'viewer', isApproved: true },
+  { email: 'davideliasmagalhaes@gmail.com', password: 'admin123', userId: '6', role: 'admin', isApproved: true },
 ];
 
 // Mock users data
@@ -63,176 +46,245 @@ const initialUsers: User[] = [
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEYS = {
-  USERS: 'pelada_stats_users',
-  AUTH_USERS: 'pelada_stats_auth_users'
-};
-
-// Helper functions to manage localStorage
-const getStoredData = <T,>(key: string, defaultValue: T): T => {
-  if (typeof window === 'undefined') return defaultValue;
-  const stored = localStorage.getItem(key);
-  return stored ? JSON.parse(stored) : defaultValue;
-};
-
-const setStoredData = <T,>(key: string, data: T): void => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(key, JSON.stringify(data));
-};
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserAuth | null>(null);
-  const [users, setUsers] = useState<User[]>(() => getStoredData(STORAGE_KEYS.USERS, initialUsers));
-  const [authUsers, setAuthUsers] = useState<UserAuth[]>(() => getStoredData(STORAGE_KEYS.AUTH_USERS, initialAuthUsers));
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [authUsers, setAuthUsers] = useState<UserAuth[]>(initialAuthUsers);
+  const [users, setUsers] = useState<User[]>(initialUsers);
   const { setCurrentUser } = useUser();
 
-  // Update localStorage when users or authUsers change
+  // Check if user is already logged in on mount
   useEffect(() => {
-    setStoredData(STORAGE_KEYS.USERS, users);
-  }, [users]);
+    const checkAuth = () => {
+      const userJson = localStorage.getItem('currentUser');
+      if (userJson) {
+        const user = JSON.parse(userJson);
+        setCurrentUser(user);
+        setIsLoggedIn(true);
+      }
+      setIsLoading(false);
+    };
 
-  useEffect(() => {
-    setStoredData(STORAGE_KEYS.AUTH_USERS, authUsers);
-  }, [authUsers]);
-
-  useEffect(() => {
-    const userJson = localStorage.getItem('currentUser');
-    if (userJson) {
-      const user = JSON.parse(userJson);
-      setCurrentUser(user);
-      setUser(user);
-    }
+    checkAuth();
   }, [setCurrentUser]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
     const userAuth = authUsers.find(
-      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+      user => user.email.toLowerCase() === email.toLowerCase() && 
+             user.password === password &&
+             user.isApproved
     );
 
     if (!userAuth) {
-      toast.error('Email ou senha inválidos');
+      if (authUsers.find(user => user.email.toLowerCase() === email.toLowerCase() && !user.isApproved)) {
+        toast.error('Sua conta ainda está aguardando aprovação');
+      } else {
+        toast.error('Email ou senha inválidos');
+      }
       return false;
     }
 
-    if (!userAuth.isApproved) {
-      toast.error('Sua conta ainda não foi aprovada por um administrador');
-      return false;
+    const userData = users.find(user => user.id === userAuth.userId);
+    
+    if (userData) {
+      setCurrentUser(userData);
+      localStorage.setItem('currentUser', JSON.stringify(userData));
+      setIsLoggedIn(true);
+      toast.success('Login realizado com sucesso!');
+      return true;
     }
 
-    const userData: User = {
-      id: userAuth.id,
-      name: userAuth.name,
-      email: userAuth.email,
-      role: userAuth.role,
-      avatar: userAuth.avatar,
-    };
-
-    setCurrentUser(userData);
-    setUser(userAuth);
-    localStorage.setItem('currentUser', JSON.stringify(userData));
-    toast.success('Login realizado com sucesso!');
-    return true;
+    toast.error('Erro ao recuperar dados do usuário');
+    return false;
   };
 
   const register = async (name: string, email: string, password: string): Promise<boolean> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
     // Check if email already exists
-    if (users.some(u => u.email === email)) {
-      throw new Error("Email já cadastrado");
+    if (authUsers.some(user => user.email.toLowerCase() === email.toLowerCase())) {
+      toast.error('Este email já está cadastrado');
+      return false;
     }
 
+    // Generate a new user ID
+    const newUserId = (Math.max(...users.map(u => parseInt(u.id))) + 1).toString();
+
+    // Create new user
     const newUser: User = {
-      id: crypto.randomUUID(),
+      id: newUserId,
       name,
       email,
-      role: "viewer",
-      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
+      role: 'viewer', // Default role, will be changed upon approval
     };
 
-    const newUserAuth: UserAuth = {
-      ...newUser,
+    // Create new auth entry
+    const newAuthUser: UserAuth = {
+      userId: newUserId,
+      email,
       password,
+      role: 'viewer',
       isApproved: false,
     };
 
-    const newUsers = [...users, newUser];
-    const newAuthUsers = [...authUsers, newUserAuth];
-    
-    setUsers(newUsers);
-    setAuthUsers(newAuthUsers);
+    // Add to our mock database
+    setUsers([...users, newUser]);
+    setAuthUsers([...authUsers, newAuthUser]);
+
     return true;
   };
 
   const approveUser = async (userId: string, role: UserRole): Promise<boolean> => {
-    const updatedAuthData = authUsers.map(user => {
-      if (user.id === userId) {
-        return { ...user, isApproved: true, role };
-      }
-      return user;
-    });
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
 
-    const updatedUsers = users.map(user => {
-      if (user.id === userId) {
-        return { ...user, role };
-      }
-      return user;
-    });
+    const userIndex = users.findIndex(u => u.id === userId);
+    const authIndex = authUsers.findIndex(u => u.userId === userId);
 
-    setAuthUsers(updatedAuthData);
+    if (userIndex === -1 || authIndex === -1) {
+      toast.error('Usuário não encontrado');
+      return false;
+    }
+
+    // Update user role and approval status
+    const updatedUsers = [...users];
+    updatedUsers[userIndex] = { ...updatedUsers[userIndex], role };
+
+    const updatedAuthUsers = [...authUsers];
+    updatedAuthUsers[authIndex] = { ...updatedAuthUsers[authIndex], role, isApproved: true };
+
     setUsers(updatedUsers);
+    setAuthUsers(updatedAuthUsers);
+
+    toast.success('Usuário aprovado com sucesso');
     return true;
   };
 
   const rejectUser = async (userId: string): Promise<boolean> => {
-    const updatedAuthData = authUsers.filter(user => user.id !== userId);
-    const updatedUsers = users.filter(user => user.id !== userId);
-    setAuthUsers(updatedAuthData);
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const userIndex = users.findIndex(u => u.id === userId);
+    const authIndex = authUsers.findIndex(u => u.userId === userId);
+
+    if (userIndex === -1 || authIndex === -1) {
+      toast.error('Usuário não encontrado');
+      return false;
+    }
+
+    // Remove user from both arrays
+    const updatedUsers = users.filter(u => u.id !== userId);
+    const updatedAuthUsers = authUsers.filter(u => u.userId !== userId);
+
     setUsers(updatedUsers);
+    setAuthUsers(updatedAuthUsers);
+
+    toast.success('Usuário rejeitado com sucesso');
     return true;
   };
 
   const getPendingUsers = async (): Promise<User[]> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
     const pendingUserIds = authUsers
-      .filter(user => !user.isApproved)
-      .map(user => user.id);
-    return users.filter(user => pendingUserIds.includes(user.id));
+      .filter(u => !u.isApproved)
+      .map(u => u.userId);
+
+    return users.filter(u => pendingUserIds.includes(u.id));
   };
 
   const logout = () => {
     localStorage.removeItem('currentUser');
     setCurrentUser(null);
-    setUser(null);
+    setIsLoggedIn(false);
     toast.info('Você foi desconectado');
   };
 
-  const handlePasswordReset = async (email: string): Promise<boolean> => {
-    const userAuth = authUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (!userAuth) {
-      toast.error('Email não encontrado');
+  const requestPasswordReset = async (email: string): Promise<boolean> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Find user by email
+    const userIndex = authUsers.findIndex(
+      user => user.email.toLowerCase() === email.toLowerCase()
+    );
+
+    if (userIndex === -1) {
+      // Don't reveal if email exists or not for security
+      toast.success('Se este email estiver cadastrado, você receberá um link para redefinir sua senha.');
+      return true;
+    }
+
+    // Generate a random token
+    const token = Math.random().toString(36).substring(2, 15);
+    
+    // Update user with reset token
+    const updatedAuthUsers = [...authUsers];
+    updatedAuthUsers[userIndex] = {
+      ...updatedAuthUsers[userIndex],
+      resetToken: token
+    };
+
+    setAuthUsers(updatedAuthUsers);
+
+    // In a real app, this would send an email with the reset link
+    const baseUrl = window.location.origin;
+    const resetLink = `${baseUrl}/create-password?email=${encodeURIComponent(email)}&token=${token}`;
+    console.log('Reset link (in real app, this would be sent via email):', resetLink);
+
+    toast.success('Se este email estiver cadastrado, você receberá um link para redefinir sua senha.');
+    return true;
+  };
+
+  const createPassword = async (email: string, token: string, password: string): Promise<boolean> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Find user with matching email and token
+    const userIndex = authUsers.findIndex(
+      user => user.email.toLowerCase() === email.toLowerCase() && user.resetToken === token
+    );
+
+    if (userIndex === -1) {
+      toast.error('Link inválido ou expirado');
       return false;
     }
 
-    // For now, we'll just show a success message
-    // In a real application, you would send a reset email
-    toast.success('Se este email estiver cadastrado, você receberá as instruções para redefinir sua senha');
+    // Update user with new password and remove reset token
+    const updatedAuthUsers = [...authUsers];
+    updatedAuthUsers[userIndex] = {
+      ...updatedAuthUsers[userIndex],
+      password,
+      resetToken: undefined
+    };
+
+    setAuthUsers(updatedAuthUsers);
+    toast.success('Senha criada com sucesso! Agora você pode fazer login.');
     return true;
   };
 
   return (
     <AuthContext.Provider value={{
-      user,
-      users,
+      isLoggedIn,
+      isLoading,
       login,
       logout,
+      createPassword,
+      requestPasswordReset,
       register,
       approveUser,
       rejectUser,
       getPendingUsers,
-      handlePasswordReset,
     }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

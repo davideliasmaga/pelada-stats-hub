@@ -1,26 +1,7 @@
 import { Player, Game, Goal, Transaction, PlayerPosition, RunningAbility, GameType, TransactionType } from '@/types';
 
-const STORAGE_KEYS = {
-  PLAYERS: 'pelada_stats_players',
-  GAMES: 'pelada_stats_games',
-  GOALS: 'pelada_stats_goals',
-  TRANSACTIONS: 'pelada_stats_transactions'
-};
-
-// Helper functions to manage localStorage
-const getStoredData = <T,>(key: string, defaultValue: T): T => {
-  if (typeof window === 'undefined') return defaultValue;
-  const stored = localStorage.getItem(key);
-  return stored ? JSON.parse(stored) : defaultValue;
-};
-
-const setStoredData = <T,>(key: string, data: T): void => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(key, JSON.stringify(data));
-};
-
-// Initial mock data
-const initialPlayers: Player[] = [
+// Mock data
+const players: Player[] = [
   { id: '1', name: 'Ronaldo', position: 'atacante', running: 'sim', rating: 9, photo: 'https://images.unsplash.com/photo-1493962853295-0fd70327578a?w=150' },
   { id: '2', name: 'Roberto Carlos', position: 'defensor', running: 'sim', rating: 8.5 },
   { id: '3', name: 'Zidane', position: 'meia', running: 'medio', rating: 9.5, photo: 'https://images.unsplash.com/photo-1466721591366-2d5fba72006d?w=150' },
@@ -33,7 +14,7 @@ const initialPlayers: Player[] = [
   { id: '10', name: 'Kaká', position: 'meia', running: 'sim', rating: 9.2 },
 ];
 
-const initialGames: Game[] = [
+const games: Game[] = [
   { id: '1', date: '2023-04-15T18:00:00Z', type: 'pelada' },
   { id: '2', date: '2023-04-22T18:00:00Z', type: 'pelada' },
   { id: '3', date: '2023-04-29T18:00:00Z', type: 'pelada' },
@@ -41,7 +22,7 @@ const initialGames: Game[] = [
   { id: '5', date: '2023-05-13T18:00:00Z', type: 'campeonato' },
 ];
 
-const initialGoals: Goal[] = [
+const goals: Goal[] = [
   { id: '1', gameId: '1', playerId: '1', count: 3 },
   { id: '2', gameId: '1', playerId: '3', count: 1 },
   { id: '3', gameId: '1', playerId: '6', count: 2 },
@@ -54,19 +35,13 @@ const initialGoals: Goal[] = [
   { id: '10', gameId: '5', playerId: '6', count: 4 },
 ];
 
-const initialTransactions: Transaction[] = [
+const transactions: Transaction[] = [
   { id: '1', date: '2023-04-01T12:00:00Z', type: 'entrada', amount: 500, description: 'Mensalidade de Abril' },
   { id: '2', date: '2023-04-05T14:30:00Z', type: 'saida', amount: 200, description: 'Aluguel do campo' },
   { id: '3', date: '2023-04-12T10:00:00Z', type: 'entrada', amount: 100, description: 'Convidados' },
   { id: '4', date: '2023-04-19T15:45:00Z', type: 'saida', amount: 150, description: 'Novas bolas' },
   { id: '5', date: '2023-05-01T12:00:00Z', type: 'entrada', amount: 500, description: 'Mensalidade de Maio' },
 ];
-
-// Data state
-let players = getStoredData(STORAGE_KEYS.PLAYERS, initialPlayers);
-let games = getStoredData(STORAGE_KEYS.GAMES, initialGames);
-let goals = getStoredData(STORAGE_KEYS.GOALS, initialGoals);
-let transactions = getStoredData(STORAGE_KEYS.TRANSACTIONS, initialTransactions);
 
 // Player Service
 export const getPlayers = (): Player[] => {
@@ -78,21 +53,15 @@ export const getPlayer = (id: string): Player | undefined => {
 };
 
 export const createPlayer = (player: Omit<Player, 'id'>): Player => {
-  const newPlayer = { ...player, id: crypto.randomUUID() };
-  players = [...players, newPlayer];
-  setStoredData(STORAGE_KEYS.PLAYERS, players);
+  const newPlayer = { ...player, id: String(Date.now()) };
+  players.push(newPlayer);
   return newPlayer;
 };
 
 export const updatePlayer = (id: string, updates: Partial<Player>): Player | undefined => {
   const index = players.findIndex(player => player.id === id);
   if (index !== -1) {
-    players = [
-      ...players.slice(0, index),
-      { ...players[index], ...updates },
-      ...players.slice(index + 1)
-    ];
-    setStoredData(STORAGE_KEYS.PLAYERS, players);
+    players[index] = { ...players[index], ...updates };
     return players[index];
   }
   return undefined;
@@ -101,8 +70,7 @@ export const updatePlayer = (id: string, updates: Partial<Player>): Player | und
 export const deletePlayer = (id: string): boolean => {
   const index = players.findIndex(player => player.id === id);
   if (index !== -1) {
-    players = players.filter(player => player.id !== id);
-    setStoredData(STORAGE_KEYS.PLAYERS, players);
+    players.splice(index, 1);
     return true;
   }
   return false;
@@ -118,21 +86,15 @@ export const getGame = (id: string): Game | undefined => {
 };
 
 export const createGame = (game: Omit<Game, 'id'>): Game => {
-  const newGame = { ...game, id: crypto.randomUUID() };
-  games = [...games, newGame];
-  setStoredData(STORAGE_KEYS.GAMES, games);
+  const newGame = { ...game, id: String(Date.now()) };
+  games.push(newGame);
   return newGame;
 };
 
 export const updateGame = (id: string, updates: Partial<Game>): Game | undefined => {
   const index = games.findIndex(game => game.id === id);
   if (index !== -1) {
-    games = [
-      ...games.slice(0, index),
-      { ...games[index], ...updates },
-      ...games.slice(index + 1)
-    ];
-    setStoredData(STORAGE_KEYS.GAMES, games);
+    games[index] = { ...games[index], ...updates };
     return games[index];
   }
   return undefined;
@@ -141,17 +103,17 @@ export const updateGame = (id: string, updates: Partial<Game>): Game | undefined
 export const deleteGame = (id: string): boolean => {
   const index = games.findIndex(game => game.id === id);
   if (index !== -1) {
-    games = games.filter(game => game.id !== id);
-    // Also delete associated goals
-    goals = goals.filter(goal => goal.gameId !== id);
-    setStoredData(STORAGE_KEYS.GAMES, games);
-    setStoredData(STORAGE_KEYS.GOALS, goals);
+    games.splice(index, 1);
     return true;
   }
   return false;
 };
 
 // Goal Service
+export const getGoals = (): Goal[] => {
+  return goals;
+};
+
 export const getGoalsByGame = (gameId: string): Goal[] => {
   return goals.filter(goal => goal.gameId === gameId);
 };
@@ -166,30 +128,19 @@ export const createGoal = (goal: Omit<Goal, 'id'>): Goal => {
   );
 
   if (existingGoal) {
-    goals = goals.map(g => 
-      g.id === existingGoal.id 
-        ? { ...g, count: g.count + goal.count }
-        : g
-    );
-    setStoredData(STORAGE_KEYS.GOALS, goals);
-    return { ...existingGoal, count: existingGoal.count + goal.count };
+    existingGoal.count += goal.count;
+    return existingGoal;
   }
 
-  const newGoal = { ...goal, id: crypto.randomUUID() };
-  goals = [...goals, newGoal];
-  setStoredData(STORAGE_KEYS.GOALS, goals);
+  const newGoal = { ...goal, id: String(Date.now()) };
+  goals.push(newGoal);
   return newGoal;
 };
 
 export const updateGoal = (id: string, updates: Partial<Goal>): Goal | undefined => {
   const index = goals.findIndex(goal => goal.id === id);
   if (index !== -1) {
-    goals = [
-      ...goals.slice(0, index),
-      { ...goals[index], ...updates },
-      ...goals.slice(index + 1)
-    ];
-    setStoredData(STORAGE_KEYS.GOALS, goals);
+    goals[index] = { ...goals[index], ...updates };
     return goals[index];
   }
   return undefined;
@@ -198,8 +149,7 @@ export const updateGoal = (id: string, updates: Partial<Goal>): Goal | undefined
 export const deleteGoal = (id: string): boolean => {
   const index = goals.findIndex(goal => goal.id === id);
   if (index !== -1) {
-    goals = goals.filter(goal => goal.id !== id);
-    setStoredData(STORAGE_KEYS.GOALS, goals);
+    goals.splice(index, 1);
     return true;
   }
   return false;
@@ -210,42 +160,27 @@ export const getTransactions = (): Transaction[] => {
   return transactions;
 };
 
-export const getTransaction = (id: string): Transaction | undefined => {
-  return transactions.find(transaction => transaction.id === id);
+export const getTotalBalance = (): number => {
+  return transactions.reduce((acc, transaction) => {
+    if (transaction.type === 'entrada') {
+      return acc + transaction.amount;
+    } else {
+      return acc - transaction.amount;
+    }
+  }, 0);
 };
 
 export const createTransaction = (transaction: Omit<Transaction, 'id'>): Transaction => {
-  const newTransaction = { ...transaction, id: crypto.randomUUID() };
-  transactions = [...transactions, newTransaction];
-  setStoredData(STORAGE_KEYS.TRANSACTIONS, transactions);
+  const newTransaction = { ...transaction, id: String(Date.now()) };
+  transactions.push(newTransaction);
   return newTransaction;
 };
 
-export const updateTransaction = (id: string, updates: Partial<Transaction>): Transaction | undefined => {
-  const index = transactions.findIndex(transaction => transaction.id === id);
-  if (index !== -1) {
-    transactions = [
-      ...transactions.slice(0, index),
-      { ...transactions[index], ...updates },
-      ...transactions.slice(index + 1)
-    ];
-    setStoredData(STORAGE_KEYS.TRANSACTIONS, transactions);
-    return transactions[index];
-  }
-  return undefined;
+export const clearTransactions = (): void => {
+  transactions.length = 0; // This empties the array without creating a new reference
 };
 
-export const deleteTransaction = (id: string): boolean => {
-  const index = transactions.findIndex(transaction => transaction.id === id);
-  if (index !== -1) {
-    transactions = transactions.filter(transaction => transaction.id !== id);
-    setStoredData(STORAGE_KEYS.TRANSACTIONS, transactions);
-    return true;
-  }
-  return false;
-};
-
-// Statistics Service
+// Top Scorers and Statistics
 export const getTopScorers = (
   period?: { start: string; end: string },
   gameType?: GameType
@@ -280,27 +215,69 @@ export const getTopScorers = (
     .sort((a, b) => b.goals - a.goals) as Array<{ player: Player; goals: number }>;
 };
 
-export const getTotalBalance = (): number => {
-  return transactions.reduce((total, transaction) => {
-    return total + (transaction.type === 'entrada' ? transaction.amount : -transaction.amount);
-  }, 0);
-};
-
-// Team Generation Service
-export const generateBalancedTeams = (playerIds: string[], numTeams: number): Player[][] => {
+export const generateBalancedTeams = (playerIds: string[], numTeams: number = 4): Player[][] => {
+  if (playerIds.length < numTeams) {
+    return [];
+  }
+  
+  // Get selected players
   const selectedPlayers = players.filter(p => playerIds.includes(p.id));
   
-  // Sort players by rating
-  const sortedPlayers = [...selectedPlayers].sort((a, b) => b.rating - a.rating);
-  
   // Initialize teams
-  const teams: Player[][] = Array(numTeams).fill(null).map(() => []);
+  const teams: Player[][] = Array.from({ length: numTeams }, () => []);
   
-  // Distribute players
-  sortedPlayers.forEach((player, index) => {
-    const teamIndex = index % numTeams;
-    teams[teamIndex].push(player);
+  // First, distribute defenders to ensure each team has at least one
+  const defenders = selectedPlayers.filter(p => p.position === 'defensor');
+  defenders.forEach((defender, index) => {
+    if (index < numTeams) {
+      teams[index % numTeams].push(defender);
+    }
   });
+  
+  // Remove assigned defenders from the pool
+  const assignedDefenders = defenders.slice(0, numTeams);
+  let remainingPlayers = selectedPlayers.filter(
+    p => !assignedDefenders.some(d => d.id === p.id)
+  );
+  
+  // Segregate players who don't run
+  const nonRunners = remainingPlayers.filter(p => p.running === 'nao');
+  remainingPlayers = remainingPlayers.filter(p => p.running !== 'nao');
+  
+  // Sort remaining players by rating (high to low)
+  remainingPlayers.sort((a, b) => b.rating - a.rating);
+  
+  // Distribute non-runners across teams (at most 1 per team if possible)
+  nonRunners.forEach((player, index) => {
+    teams[index % numTeams].push(player);
+  });
+  
+  // Use snake draft to distribute the rest to balance team strength
+  // Order: Team 0 -> 1 -> 2 -> 3 -> 3 -> 2 -> 1 -> 0 -> 0 -> ...
+  let direction = 1;
+  let currentTeam = 0;
+  
+  remainingPlayers.forEach(player => {
+    teams[currentTeam].push(player);
+    
+    currentTeam += direction;
+    if (currentTeam === numTeams) {
+      direction = -1;
+      currentTeam = numTeams - 1;
+    } else if (currentTeam < 0) {
+      direction = 1;
+      currentTeam = 0;
+    }
+  });
+  
+  // Calculate and log team balance statistics (for debugging)
+  const teamStats = teams.map(team => ({
+    avgRating: team.reduce((sum, p) => sum + p.rating, 0) / team.length,
+    defenders: team.filter(p => p.position === 'defensor').length,
+    nonRunners: team.filter(p => p.running === 'nao').length
+  }));
+  
+  console.log('Team balance stats:', teamStats);
   
   return teams;
 };

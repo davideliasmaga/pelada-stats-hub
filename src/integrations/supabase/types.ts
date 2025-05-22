@@ -9,7 +9,156 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      games: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          photo: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          photo?: string | null
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          photo?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
+      goals: {
+        Row: {
+          count: number
+          created_at: string | null
+          game_id: string | null
+          id: string
+          player_id: string | null
+        }
+        Insert: {
+          count?: number
+          created_at?: string | null
+          game_id?: string | null
+          id?: string
+          player_id?: string | null
+        }
+        Update: {
+          count?: number
+          created_at?: string | null
+          game_id?: string | null
+          id?: string
+          player_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goals_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      players: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          photo: string | null
+          position: string
+          rating: number
+          running: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          photo?: string | null
+          position: string
+          rating: number
+          running: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          photo?: string | null
+          position?: string
+          rating?: number
+          running?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          role: string
+          updated_at: string | null
+        }
+        Insert: {
+          avatar?: string | null
+          created_at?: string | null
+          email?: string | null
+          id: string
+          name: string
+          role: string
+          updated_at?: string | null
+        }
+        Update: {
+          avatar?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          role?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          date: string
+          description: string
+          id: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          date: string
+          description: string
+          id?: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          date?: string
+          description?: string
+          id?: string
+          type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

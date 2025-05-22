@@ -70,7 +70,7 @@ type NewUserFormValues = z.infer<typeof newUserSchema>;
 
 const Admin = () => {
   const { currentUser } = useUser();
-  const { approveUser, rejectUser, getPendingUsers } = useAuth();
+  const { approveUser, rejectUser, getPendingUsers, users } = useAuth();
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isApproving, setIsApproving] = useState<string | null>(null);
@@ -155,45 +155,63 @@ const Admin = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {pendingUsers.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell>{user.name}</TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>
-                            <Select
-                              defaultValue="viewer"
-                              onValueChange={(value) => handleApprove(user.id, value as UserRole)}
-                              disabled={isApproving === user.id || isRejecting === user.id}
-                            >
-                              <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Selecione a função" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="mensalista">Mensalista</SelectItem>
-                                <SelectItem value="viewer">Viewer</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleReject(user.id)}
-                              disabled={isApproving === user.id || isRejecting === user.id}
-                            >
-                              {isRejecting === user.id ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Rejeitando...
-                                </>
-                              ) : (
-                                "Rejeitar"
-                              )}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {pendingUsers.map((user) => {
+                        const [selectedRole, setSelectedRole] = useState<UserRole>("viewer");
+                        return (
+                          <TableRow key={user.id}>
+                            <TableCell>{user.name}</TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>
+                              <Select
+                                defaultValue="viewer"
+                                onValueChange={(value) => setSelectedRole(value as UserRole)}
+                                disabled={isApproving === user.id || isRejecting === user.id}
+                              >
+                                <SelectTrigger className="w-[180px]">
+                                  <SelectValue placeholder="Selecione a função" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                  <SelectItem value="mensalista">Mensalista</SelectItem>
+                                  <SelectItem value="viewer">Viewer</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="text-right space-x-2">
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => handleApprove(user.id, selectedRole)}
+                                disabled={isApproving === user.id || isRejecting === user.id}
+                              >
+                                {isApproving === user.id ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Aprovando...
+                                  </>
+                                ) : (
+                                  "Aprovar"
+                                )}
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleReject(user.id)}
+                                disabled={isApproving === user.id || isRejecting === user.id}
+                              >
+                                {isRejecting === user.id ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Rejeitando...
+                                  </>
+                                ) : (
+                                  "Rejeitar"
+                                )}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 )}
@@ -217,7 +235,7 @@ const Admin = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {initialUsers.map((user) => (
+                    {users.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell>{user.name}</TableCell>
                         <TableCell>{user.email}</TableCell>

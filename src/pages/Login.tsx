@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,8 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { MailIcon, LockIcon } from "lucide-react";
-import { Loader2 } from "lucide-react";
+import { MailIcon, LockIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,

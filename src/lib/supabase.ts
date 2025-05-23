@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = "https://ujtwhqumskbdxmnurfeq.supabase.co";
@@ -99,7 +100,9 @@ export type Database = {
   };
 };
 
-// Handle supabase initialization more safely
+// Safe initialization without recursive calls
+let initialized = false;
+
 export const fixSupabaseInfiniteRecursion = () => {
   // Skip initialization completely in non-browser environments
   if (typeof window === 'undefined') {
@@ -107,31 +110,27 @@ export const fixSupabaseInfiniteRecursion = () => {
   }
   
   // Only attempt to initialize once
-  let initialized = false;
+  if (initialized) return;
+  initialized = true;
   
-  const safeInit = () => {
-    if (initialized) return;
-    
-    // Set flag to prevent recursive initialization
-    initialized = true;
-    
-    try {
-      // Just check session existence without doing any redirects
-      supabase.auth.getSession().catch(err => {
-        console.error("Session check error:", err.message || err);
-      });
-    } catch (err) {
-      console.error("Critical error in Supabase initialization:", err);
-    }
-  };
-  
-  // Run initialization after page load
-  if (document.readyState === 'complete') {
-    setTimeout(safeInit, 100);
-  } else {
-    window.addEventListener('load', () => setTimeout(safeInit, 100));
+  try {
+    // Just check session existence without doing any redirects
+    console.log("Initializing Supabase session check");
+    supabase.auth.getSession().then(({ data }) => {
+      console.log("Session check complete", data.session ? "Session exists" : "No session");
+    }).catch(err => {
+      console.error("Session check error:", err.message || err);
+    });
+  } catch (err) {
+    console.error("Critical error in Supabase initialization:", err);
   }
 };
 
-// Initialize safely
-fixSupabaseInfiniteRecursion();
+// Initialize safely after page load
+if (typeof window !== 'undefined') {
+  if (document.readyState === 'complete') {
+    setTimeout(() => fixSupabaseInfiniteRecursion(), 100);
+  } else {
+    window.addEventListener('load', () => setTimeout(() => fixSupabaseInfiniteRecursion(), 100));
+  }
+}

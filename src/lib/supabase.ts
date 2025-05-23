@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = "https://ujtwhqumskbdxmnurfeq.supabase.co";
@@ -99,41 +98,49 @@ export type Database = {
   };
 };
 
-// Fix for the recursion detection in policy issue
+// Create a safer initialization approach that won't cause recursion
 export const fixSupabaseInfiniteRecursion = () => {
   console.log("Ensuring Supabase works correctly...");
   
-  // Use a robust initialization approach
+  // Avoid multiple initialization calls
   let initialized = false;
   
   const initSession = () => {
     if (initialized) return;
+    initialized = true;
     
-    // Add significant delay to avoid any potential race conditions
+    // Use setTimeout to push this to the end of the event loop
     setTimeout(() => {
       try {
         console.log("Initializing Supabase session...");
-        supabase.auth.getSession().then(({ data, error }) => {
-          if (error) {
-            console.error("Session error during initialization:", error);
-          } else if (data.session) {
+        // Simply check the session without any further actions to avoid recursion
+        supabase.auth.getSession().then(({ data }) => {
+          if (data && data.session) {
             console.log("Session found during initialization");
           } else {
             console.log("No active session during initialization");
           }
-          initialized = true;
+        }).catch(err => {
+          console.log("Error checking session:", err.message || err);
+          // Don't rethrow to prevent breaking the app
         });
       } catch (err) {
         console.error("Critical error initializing Supabase:", err);
+        // Silent failure - we don't want to break the app
       }
-    }, 1000); // Longer delay for safety
+    }, 1500); // Large delay to ensure everything is ready
   };
   
-  // Initialize after DOM is fully loaded
+  // Initialize only after the DOM is fully loaded
   if (document.readyState === 'complete') {
     initSession();
   } else {
-    window.addEventListener('load', initSession);
+    // Use a once listener to avoid multiple initializations
+    const onLoad = () => {
+      initSession();
+      window.removeEventListener('load', onLoad);
+    };
+    window.addEventListener('load', onLoad);
   }
 };
 

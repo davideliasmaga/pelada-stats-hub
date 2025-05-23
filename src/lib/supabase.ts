@@ -102,18 +102,39 @@ export type Database = {
 // Fix for the recursion detection in policy issue
 export const fixSupabaseInfiniteRecursion = () => {
   console.log("Ensuring Supabase works correctly...");
-  // This helps ensure that Supabase Auth is initialized properly
-  setTimeout(() => {
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (error) {
-        console.error("Session error during initialization:", error);
-      } else if (data.session) {
-        console.log("Session found during initialization");
-      } else {
-        console.log("No active session during initialization");
+  
+  // Use a robust initialization approach
+  let initialized = false;
+  
+  const initSession = () => {
+    if (initialized) return;
+    
+    // Add significant delay to avoid any potential race conditions
+    setTimeout(() => {
+      try {
+        console.log("Initializing Supabase session...");
+        supabase.auth.getSession().then(({ data, error }) => {
+          if (error) {
+            console.error("Session error during initialization:", error);
+          } else if (data.session) {
+            console.log("Session found during initialization");
+          } else {
+            console.log("No active session during initialization");
+          }
+          initialized = true;
+        });
+      } catch (err) {
+        console.error("Critical error initializing Supabase:", err);
       }
-    });
-  }, 100);  // Add a small delay to avoid immediate execution
+    }, 1000); // Longer delay for safety
+  };
+  
+  // Initialize after DOM is fully loaded
+  if (document.readyState === 'complete') {
+    initSession();
+  } else {
+    window.addEventListener('load', initSession);
+  }
 };
 
 // Call this function to fix the recursion issue

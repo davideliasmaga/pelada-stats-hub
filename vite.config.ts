@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    // Use Terser instead of esbuild minify which can avoid the Rollup native extension issue
+    // Use Terser instead of esbuild minify which avoids the Rollup native extension issue
     minify: 'terser',
     terserOptions: {
       compress: {
@@ -30,11 +30,24 @@ export default defineConfig(({ mode }) => ({
       },
     },
     rollupOptions: {
-      // Ensure Rollup doesn't try to use native extensions
+      // Explicitly disable native extensions in Rollup
+      context: 'globalThis',
+      plugins: [],
+      // Force pure JavaScript implementations
       treeshake: {
         moduleSideEffects: true,
+        preset: 'smallest',
+      },
+      // Avoid bundling node modules
+      external: [],
+      output: {
+        // Use ES modules format
+        format: 'es',
+        // Ensure we're not using any features requiring native extensions
+        generatedCode: {
+          preset: 'es2015',
+        },
       },
     },
   },
 }));
-

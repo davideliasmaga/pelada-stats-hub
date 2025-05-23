@@ -1,19 +1,19 @@
 
-import { defineConfig, ConfigEnv } from "vite";
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }: ConfigEnv) => ({
+export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
   },
   plugins: [
     react({
-      // Configure JSX runtime to use the automatic runtime
-      jsxRuntime: "automatic"
+      // Configure JSX through the proper options for react-swc
+      jsxImportSource: "react"
     }),
     mode === 'development' &&
     componentTagger(),
@@ -60,7 +60,7 @@ export default defineConfig(({ mode }: ConfigEnv) => ({
   esbuild: {
     // TypeScript compatibility fix
     minify: false,
-    target: 'es2015',
-    jsx: 'automatic'  // Ensure JSX is handled correctly
+    target: 'es2015'
+    // Remove the jsx option that was causing conflict
   },
 }));

@@ -1,14 +1,21 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 // Estas variáveis devem ser definidas no arquivo .env
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ujtwhqumskbdxmnurfeq.supabase.co";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqdHdocXVtc2tiZHhtbnVyZmVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5MzM0MjQsImV4cCI6MjA2MzUwOTQyNH0.lSiSWmYHkfVHk9KSo4NFDuFmWganbuOWm_3uCeUqRWA";
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase URL and Anon Key são necessários. Verifique seu arquivo .env');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    storage: localStorage
+  }
+});
 
 // Tipos para as tabelas do Supabase
 export type Database = {
@@ -78,4 +85,4 @@ export type Database = {
       };
     };
   };
-}; 
+};

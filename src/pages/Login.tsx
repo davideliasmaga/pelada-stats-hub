@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { MailIcon, LockIcon } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +30,7 @@ import {
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Email inválido" }),
-  password: z.string().min(6, { message: "Senha deve ter pelo menos 6 caracteres" }),
+  password: z.string().min(1, { message: "Senha é obrigatória" }),
 });
 
 type LoginValues = z.infer<typeof loginSchema>;
@@ -36,11 +38,18 @@ type LoginValues = z.infer<typeof loginSchema>;
 const Login = () => {
   const { isLoggedIn, isLoading, login, requestPasswordReset } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [isResetting, setIsResetting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  
+  useEffect(() => {
+    // Pre-fill the admin credentials for development convenience
+    form.setValue("email", "davideliasmagalhaes@gmail.com");
+    form.setValue("password", "admin123456");
+  }, []);
   
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -66,14 +75,25 @@ const Login = () => {
   }
 
   const onSubmit = async (values: LoginValues) => {
+    setLoginError(null);
     setIsSubmitting(true);
+    
     try {
+      console.log("Submitting login form with:", values.email);
       const success = await login(values.email, values.password);
+      
       if (success) {
+        console.log("Login successful, navigating...");
         // Navigate to the previous page or home
         const from = location.state?.from?.pathname || "/";
         navigate(from, { replace: true });
+      } else {
+        console.log("Login failed");
+        setLoginError("Falha ao realizar login. Verifique suas credenciais.");
       }
+    } catch (error) {
+      console.error("Login submission error:", error);
+      setLoginError("Ocorreu um erro ao processar o login. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -104,6 +124,12 @@ const Login = () => {
         </div>
 
         <div className="bg-white p-8 rounded-xl shadow-md">
+          {loginError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+              {loginError}
+            </div>
+          )}
+          
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
@@ -230,6 +256,11 @@ const Login = () => {
               </div>
             </form>
           </Form>
+        </div>
+        
+        <div className="mt-6 text-center text-xs text-gray-500">
+          <p>Usuário padrão: davideliasmagalhaes@gmail.com</p>
+          <p>Senha padrão: admin123456</p>
         </div>
       </div>
     </div>

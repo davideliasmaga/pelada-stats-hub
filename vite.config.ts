@@ -21,38 +21,31 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    // Disable all minification to avoid native code issues
+    // Ensure we're not using any native code
     minify: false,
+    outDir: 'dist',
+    assetsDir: 'assets',
+    emptyOutDir: true,
+    // Set format to ensure compatible output
     rollupOptions: {
-      // Force Rollup to use only pure JavaScript
-      context: 'globalThis', // Use globalThis instead of window for broader compatibility
-      // Completely disable treeshaking
-      treeshake: false,
-      // Don't treat any modules as external
-      external: [],
       output: {
-        // Use ES modules format
         format: 'es',
-        // Simplify code generation to avoid advanced features
-        generatedCode: {
-          preset: 'es2015',
-        },
-        // Disable code optimizations that might use native code
-        compact: false,
-        hoistTransitiveImports: false,
-        manualChunks: undefined,
-        // Skip any plugin hooks that might use native code
-        plugins: [],
+        entryFileNames: '[name].js',
+        chunkFileNames: '[name].js',
+        assetFileNames: '[name].[ext]'
       },
+      // Skip all plugins that might use native code
+      treeshake: false,
+      context: 'globalThis',
+      plugins: [],
     },
-    // Disable sourcemap generation
+    // Avoid features that might trigger native dependencies
     sourcemap: false,
-    // Don't use watch mode (which might use native file watchers)
+    manifest: false,
+    ssrManifest: false,
     watch: null,
-    // Disable all runtime checks
     reportCompressedSize: false,
     cssCodeSplit: false,
-    // Explicitly set the target to ensure no modern features are used
     target: 'es2015',
   },
 }));

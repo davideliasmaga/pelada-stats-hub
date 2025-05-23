@@ -98,51 +98,67 @@ export type Database = {
   };
 };
 
-// Create a safer initialization approach that won't cause recursion
+// Complete override of initialization to prevent any recursion
 export const fixSupabaseInfiniteRecursion = () => {
-  console.log("Ensuring Supabase works correctly...");
+  // Don't initialize at all if we're in a build process
+  if (typeof window === 'undefined') {
+    console.log("Skipping Supabase initialization in non-browser environment");
+    return;
+  }
+
+  console.log("Setting up safe Supabase initialization...");
   
-  // Avoid multiple initialization calls
-  let initialized = false;
+  // Flag to prevent multiple initializations
+  let isInitializing = false;
+  let isInitialized = false;
   
-  const initSession = () => {
-    if (initialized) return;
-    initialized = true;
+  const safeInitSession = () => {
+    // Prevent multiple concurrent initializations
+    if (isInitializing || isInitialized) return;
     
-    // Use setTimeout to push this to the end of the event loop
+    isInitializing = true;
+    console.log("Starting safe Supabase initialization...");
+    
+    // Use a very delayed initialization to ensure everything is loaded
     setTimeout(() => {
       try {
-        console.log("Initializing Supabase session...");
-        // Simply check the session without any further actions to avoid recursion
-        supabase.auth.getSession().then(({ data }) => {
-          if (data && data.session) {
-            console.log("Session found during initialization");
-          } else {
-            console.log("No active session during initialization");
-          }
-        }).catch(err => {
-          console.log("Error checking session:", err.message || err);
-          // Don't rethrow to prevent breaking the app
-        });
+        // Just check if session exists, don't do any redirects or actions
+        supabase.auth.getSession()
+          .then(({ data }) => {
+            if (data && data.session) {
+              console.log("Found existing session during safe initialization");
+            } else {
+              console.log("No active session found during safe initialization");
+            }
+            isInitialized = true;
+            isInitializing = false;
+          })
+          .catch(err => {
+            console.error("Error during safe session check:", err.message || err);
+            // Mark as initialized anyway to prevent retries that might cause issues
+            isInitialized = true;
+            isInitializing = false;
+          });
       } catch (err) {
-        console.error("Critical error initializing Supabase:", err);
-        // Silent failure - we don't want to break the app
+        console.error("Critical error in Supabase initialization:", err);
+        // Mark as initialized to avoid infinite retry loops
+        isInitialized = true;
+        isInitializing = false;
       }
-    }, 1500); // Large delay to ensure everything is ready
+    }, 2000); // Extra long delay for safety
   };
   
-  // Initialize only after the DOM is fully loaded
+  // Run initialization after everything else has loaded
   if (document.readyState === 'complete') {
-    initSession();
+    safeInitSession();
   } else {
-    // Use a once listener to avoid multiple initializations
-    const onLoad = () => {
-      initSession();
-      window.removeEventListener('load', onLoad);
+    const handleLoad = () => {
+      safeInitSession();
+      window.removeEventListener('load', handleLoad);
     };
-    window.addEventListener('load', onLoad);
+    window.addEventListener('load', handleLoad);
   }
 };
 
-// Call this function to fix the recursion issue
+// Initialize safely
 fixSupabaseInfiniteRecursion();

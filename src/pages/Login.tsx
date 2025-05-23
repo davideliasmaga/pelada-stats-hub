@@ -32,19 +32,17 @@ const loginSchema = z.object({
   password: z.string().min(1, { message: "Senha é obrigatória" }),
 });
 
-type LoginValues = z.infer<typeof loginSchema>;
-
-const Login = () => {
+export default function Login() {
   const { isLoggedIn, isLoading, login, requestPasswordReset } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [isResetting, setIsResetting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   
-  const form = useForm<LoginValues>({
+  const form = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "davideliasmagalhaes@gmail.com",
@@ -67,7 +65,7 @@ const Login = () => {
     );
   }
 
-  const onSubmit = async (values: LoginValues) => {
+  const onSubmit = async (values) => {
     setLoginError(null);
     setIsSubmitting(true);
     
@@ -126,6 +124,7 @@ const Login = () => {
           
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Email field */}
               <FormField
                 control={form.control}
                 name="email"
@@ -147,6 +146,7 @@ const Login = () => {
                 )}
               />
               
+              {/* Password field */}
               <FormField
                 control={form.control}
                 name="password"
@@ -169,6 +169,7 @@ const Login = () => {
                 )}
               />
               
+              {/* Buttons */}
               <div className="space-y-4">
                 <Button 
                   type="submit" 
@@ -185,6 +186,7 @@ const Login = () => {
                   )}
                 </Button>
 
+                {/* Password reset and register links */}
                 <div className="flex flex-col gap-2">
                   <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
                     <DialogTrigger asChild>
@@ -252,6 +254,7 @@ const Login = () => {
           </Form>
         </div>
         
+        {/* Login help */}
         <div className="mt-6 text-center text-xs text-gray-500">
           <p>Usuário padrão: davideliasmagalhaes@gmail.com</p>
           <p>Senha padrão: admin123456</p>
@@ -262,6 +265,4 @@ const Login = () => {
       </div>
     </div>
   );
-};
-
-export default Login;
+}

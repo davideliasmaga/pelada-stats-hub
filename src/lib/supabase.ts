@@ -1,12 +1,11 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Estas variáveis devem ser definidas no arquivo .env
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://ujtwhqumskbdxmnurfeq.supabase.co";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqdHdocXVtc2tiZHhtbnVyZmVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5MzM0MjQsImV4cCI6MjA2MzUwOTQyNH0.lSiSWmYHkfVHk9KSo4NFDuFmWganbuOWm_3uCeUqRWA";
+const supabaseUrl = "https://ujtwhqumskbdxmnurfeq.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqdHdocXVtc2tiZHhtbnVyZmVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5MzM0MjQsImV4cCI6MjA2MzUwOTQyNH0.lSiSWmYHkfVHk9KSo4NFDuFmWganbuOWm_3uCeUqRWA";
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase URL and Anon Key são necessários. Verifique seu arquivo .env');
+  throw new Error('Supabase URL and Anon Key são necessários.');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -82,6 +81,19 @@ export type Database = {
         };
         Insert: Omit<Database['public']['Tables']['transactions']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['transactions']['Insert']>;
+      };
+      profiles: {
+        Row: {
+          id: string;
+          name: string;
+          email: string;
+          role: 'admin' | 'mensalista' | 'viewer';
+          avatar?: string; 
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
       };
     };
   };

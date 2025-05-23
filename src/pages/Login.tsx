@@ -45,20 +45,14 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  useEffect(() => {
-    // Pre-fill the admin credentials for development convenience
-    form.setValue("email", "davideliasmagalhaes@gmail.com");
-    form.setValue("password", "admin123456");
-  }, []);
-  
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
-      password: "",
+      email: "davideliasmagalhaes@gmail.com",
+      password: "admin123456",
     },
   });
-
+  
   // If already logged in, redirect to home
   if (isLoggedIn && !isLoading) {
     const from = location.state?.from?.pathname || "/";
@@ -105,6 +99,7 @@ const Login = () => {
     setIsResetting(true);
     try {
       await requestPasswordReset(resetEmail);
+      toast.success(`Link de redefinição enviado para ${resetEmail}`);
       setResetDialogOpen(false);
       setResetEmail("");
     } finally {
@@ -261,6 +256,9 @@ const Login = () => {
         <div className="mt-6 text-center text-xs text-gray-500">
           <p>Usuário padrão: davideliasmagalhaes@gmail.com</p>
           <p>Senha padrão: admin123456</p>
+          <p className="mt-2 text-red-500 font-semibold">
+            Se ainda não conseguir fazer login, pode ser necessário resetar a senha.
+          </p>
         </div>
       </div>
     </div>

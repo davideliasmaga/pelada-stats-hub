@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (session) {
           console.log("Session found:", session.user.id);
-          // Fetch user profile from the profiles table
+          // Fetch user profile from the public.profiles table 
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
@@ -140,7 +140,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       
-      setUsers(data as User[]);
+      if (data) {
+        const typedUsers = data.map(user => ({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role as UserRole,
+          avatar: user.avatar
+        }));
+        setUsers(typedUsers);
+      }
     } catch (error) {
       console.error('Error loading users:', error);
     }
@@ -162,17 +171,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('Login error:', error);
-        toast.error('Email ou senha inválidos');
+        toast.error(`Erro no login: ${error.message}`);
         return false;
       }
 
       if (data.session) {
         console.log("Login successful, session created:", data.session.user.id);
         toast.success('Login realizado com sucesso!');
+        
+        // Fetch user profile immediately
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.session.user.id)
+          .single();
+        
+        if (profileError) {
+          console.error("Profile fetch error after login:", profileError);
+        } else if (profile) {
+          const userData: User = {
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
+            role: profile.role as UserRole,
+            avatar: profile.avatar
+          };
+          
+          setCurrentUser(userData);
+          setIsLoggedIn(true);
+        }
+        
         return true;
       } else {
         console.error('Login failed: No session returned');
-        toast.error('Falha ao realizar login');
+        toast.error('Falha ao realizar login: Nenhuma sessão retornada');
         return false;
       }
     } catch (error) {
@@ -258,7 +290,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Logout error:', error);
+        toast.error('Erro ao realizar logout');
+        return;
+      }
+      
       localStorage.removeItem('currentUser');
       setCurrentUser(null);
       setIsLoggedIn(false);

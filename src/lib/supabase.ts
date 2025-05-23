@@ -7,15 +7,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase URL and Anon Key são necessários.');
 }
 
+// Use a simplified client configuration
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    storage: localStorage
+    storage: typeof window !== 'undefined' ? localStorage : undefined
   }
 });
 
-// Tipos para as tabelas do Supabase
+// Types for Supabase tables
 export type Database = {
   public: {
     Tables: {
@@ -98,65 +99,37 @@ export type Database = {
   };
 };
 
-// Complete override of initialization to prevent any recursion
+// Handle supabase initialization more safely
 export const fixSupabaseInfiniteRecursion = () => {
-  // Don't initialize at all if we're in a build process
+  // Skip initialization completely in non-browser environments
   if (typeof window === 'undefined') {
-    console.log("Skipping Supabase initialization in non-browser environment");
     return;
   }
-
-  console.log("Setting up safe Supabase initialization...");
   
-  // Flag to prevent multiple initializations
-  let isInitializing = false;
-  let isInitialized = false;
+  // Only attempt to initialize once
+  let initialized = false;
   
-  const safeInitSession = () => {
-    // Prevent multiple concurrent initializations
-    if (isInitializing || isInitialized) return;
+  const safeInit = () => {
+    if (initialized) return;
     
-    isInitializing = true;
-    console.log("Starting safe Supabase initialization...");
+    // Set flag to prevent recursive initialization
+    initialized = true;
     
-    // Use a very delayed initialization to ensure everything is loaded
-    setTimeout(() => {
-      try {
-        // Just check if session exists, don't do any redirects or actions
-        supabase.auth.getSession()
-          .then(({ data }) => {
-            if (data && data.session) {
-              console.log("Found existing session during safe initialization");
-            } else {
-              console.log("No active session found during safe initialization");
-            }
-            isInitialized = true;
-            isInitializing = false;
-          })
-          .catch(err => {
-            console.error("Error during safe session check:", err.message || err);
-            // Mark as initialized anyway to prevent retries that might cause issues
-            isInitialized = true;
-            isInitializing = false;
-          });
-      } catch (err) {
-        console.error("Critical error in Supabase initialization:", err);
-        // Mark as initialized to avoid infinite retry loops
-        isInitialized = true;
-        isInitializing = false;
-      }
-    }, 2000); // Extra long delay for safety
+    try {
+      // Just check session existence without doing any redirects
+      supabase.auth.getSession().catch(err => {
+        console.error("Session check error:", err.message || err);
+      });
+    } catch (err) {
+      console.error("Critical error in Supabase initialization:", err);
+    }
   };
   
-  // Run initialization after everything else has loaded
+  // Run initialization after page load
   if (document.readyState === 'complete') {
-    safeInitSession();
+    setTimeout(safeInit, 100);
   } else {
-    const handleLoad = () => {
-      safeInitSession();
-      window.removeEventListener('load', handleLoad);
-    };
-    window.addEventListener('load', handleLoad);
+    window.addEventListener('load', () => setTimeout(safeInit, 100));
   }
 };
 

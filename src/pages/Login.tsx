@@ -1,62 +1,66 @@
 
-import React, { useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { LogoWhiteBg } from "@/assets/logo-white-bg";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { MailIcon, LockIcon, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
-
-const loginSchema = z.object({
-  email: z.string().email({ message: "Email inválido" }),
-  password: z.string().min(1, { message: "Senha é obrigatória" }),
-});
 
 export default function Login() {
-  const { isLoggedIn, isLoading, login, requestPasswordReset } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [email, setEmail] = useState("davideliasmagalhaes@gmail.com");
+  const [password, setPassword] = useState("admin123456");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loginError, setLoginError] = useState(null);
-  const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [isResetting, setIsResetting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const location = useLocation();
   
-  const form = useForm({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "davideliasmagalhaes@gmail.com",
-      password: "admin123456",
-    },
-  });
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          navigate("/");
+        } 
+      } catch (err) {
+        console.error("Session check error:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
   
-  // If already logged in, redirect to home
-  if (isLoggedIn && !isLoading) {
-    const from = location.state?.from?.pathname || "/";
-    return <Navigate to={from} replace />;
-  }
-
-  // Show loading state while checking auth
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        setError(error.message);
+        toast.error(`Erro no login: ${error.message}`);
+      } else if (data.session) {
+        toast.success('Login realizado com sucesso!');
+        navigate("/", { replace: true });
+      }
+    } catch (err: any) {
+      setError(err.message || "Ocorreu um erro ao processar o login");
+      toast.error('Erro ao realizar login');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  // Show loading state
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -64,45 +68,6 @@ export default function Login() {
       </div>
     );
   }
-
-  const onSubmit = async (values) => {
-    setLoginError(null);
-    setIsSubmitting(true);
-    
-    try {
-      console.log("Submitting login form with:", values.email);
-      const success = await login(values.email, values.password);
-      
-      if (success) {
-        console.log("Login successful, navigating...");
-        // Navigate to the previous page or home
-        const from = location.state?.from?.pathname || "/";
-        navigate(from, { replace: true });
-      } else {
-        console.log("Login failed");
-        setLoginError("Falha ao realizar login. Verifique suas credenciais.");
-      }
-    } catch (error) {
-      console.error("Login submission error:", error);
-      setLoginError("Ocorreu um erro ao processar o login. Tente novamente.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleRequestReset = async () => {
-    if (!resetEmail) return;
-    
-    setIsResetting(true);
-    try {
-      await requestPasswordReset(resetEmail);
-      toast.success(`Link de redefinição enviado para ${resetEmail}`);
-      setResetDialogOpen(false);
-      setResetEmail("");
-    } finally {
-      setIsResetting(false);
-    }
-  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -116,151 +81,81 @@ export default function Login() {
         </div>
 
         <div className="bg-white p-8 rounded-xl shadow-md">
-          {loginError && (
+          {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
-              {loginError}
+              {error}
             </div>
           )}
           
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Email field */}
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <MailIcon className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                        <Input 
-                          placeholder="seu@email.com" 
-                          className="pl-10" 
-                          {...field} 
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Password field */}
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Senha</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <LockIcon className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                        <Input 
-                          type="password" 
-                          placeholder="********" 
-                          className="pl-10" 
-                          {...field} 
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Buttons */}
-              <div className="space-y-4">
-                <Button 
-                  type="submit" 
-                  className="w-full bg-gray-900 hover:bg-gray-800"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Entrando...
-                    </>
-                  ) : (
-                    "Entrar"
-                  )}
-                </Button>
-
-                {/* Password reset and register links */}
-                <div className="flex flex-col gap-2">
-                  <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button 
-                        type="button" 
-                        variant="link" 
-                        className="w-full text-gray-600 hover:text-gray-900"
-                      >
-                        Esqueci minha senha
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Redefinir Senha</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <p className="text-sm text-gray-500">
-                          Digite seu email para receber um link de redefinição de senha.
-                        </p>
-                        <Input
-                          type="email"
-                          placeholder="seu@email.com"
-                          value={resetEmail}
-                          onChange={(e) => setResetEmail(e.target.value)}
-                        />
-                      </div>
-                      <DialogFooter>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setResetDialogOpen(false)}
-                        >
-                          Cancelar
-                        </Button>
-                        <Button
-                          type="button"
-                          className="bg-gray-900 hover:bg-gray-800"
-                          onClick={handleRequestReset}
-                          disabled={isResetting || !resetEmail}
-                        >
-                          {isResetting ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Enviando...
-                            </>
-                          ) : (
-                            "Enviar Link"
-                          )}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-
-                  <Button
-                    type="button"
-                    variant="link"
-                    className="w-full text-gray-600 hover:text-gray-900"
-                    onClick={() => navigate("/register")}
-                  >
-                    Criar uma conta
-                  </Button>
-                </div>
+          <form onSubmit={handleLogin} className="space-y-6">
+            {/* Email field */}
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium">Email</label>
+              <div className="relative">
+                <MailIcon className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                <Input 
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu@email.com" 
+                  className="pl-10" 
+                  required
+                />
               </div>
-            </form>
-          </Form>
+            </div>
+            
+            {/* Password field */}
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium">Senha</label>
+              <div className="relative">
+                <LockIcon className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                <Input 
+                  id="password"
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="********" 
+                  className="pl-10" 
+                  required
+                />
+              </div>
+            </div>
+            
+            {/* Login button */}
+            <Button 
+              type="submit" 
+              className="w-full bg-gray-900 hover:bg-gray-800"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Entrando...
+                </>
+              ) : (
+                "Entrar"
+              )}
+            </Button>
+            
+            {/* Helper links */}
+            <div className="flex flex-col gap-2">
+              <Button 
+                type="button" 
+                variant="link" 
+                className="w-full text-gray-600 hover:text-gray-900"
+                onClick={() => navigate("/register")}
+              >
+                Criar uma conta
+              </Button>
+            </div>
+          </form>
         </div>
         
         {/* Login help */}
         <div className="mt-6 text-center text-xs text-gray-500">
           <p>Usuário padrão: davideliasmagalhaes@gmail.com</p>
           <p>Senha padrão: admin123456</p>
-          <p className="mt-2 text-red-500 font-semibold">
-            Se ainda não conseguir fazer login, pode ser necessário resetar a senha.
-          </p>
         </div>
       </div>
     </div>

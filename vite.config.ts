@@ -21,25 +21,27 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    // Ensure we're not using any native code
+    // Complete JavaScript build without native dependencies
     minify: false,
     outDir: 'dist',
     assetsDir: 'assets',
     emptyOutDir: true,
-    // Set format to ensure compatible output
+    // Ensure compatibility
     rollupOptions: {
       output: {
         format: 'es',
-        entryFileNames: '[name].js',
-        chunkFileNames: '[name].js',
-        assetFileNames: '[name].[ext]'
+        entryFileNames: 'assets/[name].js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name].[ext]',
       },
-      // Skip all plugins that might use native code
-      treeshake: false,
-      context: 'globalThis',
+      // Disable all plugins that might use native code
       plugins: [],
+      // Disable tree-shaking
+      treeshake: false,
+      // Use global context
+      context: 'globalThis',
     },
-    // Avoid features that might trigger native dependencies
+    // Disable all features that might trigger native dependencies
     sourcemap: false,
     manifest: false,
     ssrManifest: false,
@@ -47,5 +49,14 @@ export default defineConfig(({ mode }) => ({
     reportCompressedSize: false,
     cssCodeSplit: false,
     target: 'es2015',
+  },
+  optimizeDeps: {
+    // Disable dependency optimization
+    disabled: true
+  },
+  esbuild: {
+    // Disable minification through esbuild
+    minify: false,
+    target: 'es2015'
   },
 }));

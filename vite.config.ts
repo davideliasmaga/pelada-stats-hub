@@ -11,10 +11,7 @@ export default defineConfig({
     port: 8080,
   },
   plugins: [
-    react({
-      jsxFactory: 'React.createElement',
-      jsxFragment: 'React.Fragment'
-    }),
+    react(),
     componentTagger(),
   ],
   resolve: {

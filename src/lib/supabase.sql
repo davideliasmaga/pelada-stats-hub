@@ -267,7 +267,7 @@ begin
 
   -- Insere na tabela de autenticação
   insert into public.auth_users (email, password, user_id)
-  values ('davideliasmagalhaes@gmail.com', 'admin123456', v_user_id);
+  values ('davideliasmagalhaes@gmail.com', 'admin123', v_user_id);
 
   -- Insere na tabela auth.users do Supabase
   insert into auth.users (
@@ -282,7 +282,7 @@ begin
   values (
     v_user_id,
     'davideliasmagalhaes@gmail.com',
-    crypt('admin123456', gen_salt('bf')),
+    crypt('admin123', gen_salt('bf')),
     now(),
     now(),
     now(),

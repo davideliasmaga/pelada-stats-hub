@@ -11,7 +11,10 @@ export default defineConfig({
     port: 8080,
   },
   plugins: [
-    react(),
+    react({
+      jsxFactory: 'React.createElement',
+      jsxFragment: 'React.Fragment'
+    }),
     componentTagger(),
   ],
   resolve: {
@@ -31,7 +34,7 @@ export default defineConfig({
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name].[ext]',
       },
-      plugins: [],
+      external: [],
       treeshake: false,
       context: 'globalThis',
     },
@@ -42,9 +45,14 @@ export default defineConfig({
     reportCompressedSize: false,
     cssCodeSplit: false,
     target: 'es2015',
+    commonjsOptions: {
+      include: [/node_modules/],
+      extensions: ['.js', '.cjs'],
+    },
   },
   optimizeDeps: {
-    disabled: false
+    disabled: false,
+    include: ['react', 'react-dom']
   },
   esbuild: {
     jsxFactory: 'React.createElement',

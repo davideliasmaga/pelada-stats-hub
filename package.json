@@ -8,7 +8,9 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "clean": "rm -rf node_modules package-lock.json dist",
+    "reinstall": "npm run clean && npm install"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -80,6 +82,14 @@
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1"
+    "vite": "^5.4.1",
+    "rollup": "^4.9.6",
+    "@rollup/rollup-linux-x64-gnu": "^4.9.6",
+    "@rollup/rollup-darwin-x64": "^4.9.6",
+    "@rollup/rollup-darwin-arm64": "^4.9.6",
+    "@rollup/rollup-win32-x64-msvc": "^4.9.6"
+  },
+  "overrides": {
+    "rollup": "^4.9.6"
   }
 }

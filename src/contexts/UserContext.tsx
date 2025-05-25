@@ -7,6 +7,7 @@ interface User {
   name: string;
   role: UserRole;
   avatar?: string;
+  email?: string;
 }
 
 interface UserContextType {
@@ -20,12 +21,7 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>({
-    id: '1',
-    name: 'Admin User',
-    role: 'admin',
-    avatar: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?ixlib=rb-1.2.1&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=200&fit=max&ixid=eyJhcHBfaWQiOjE3Nzg0fQ'
-  });
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // User role checks
   // isAdmin = user has admin role
@@ -33,7 +29,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   // isViewer = all users have at least viewer access
   const isAdmin = currentUser?.role === 'admin';
   const isMensalista = currentUser?.role === 'mensalista' || isAdmin;
-  const isViewer = true; // All authenticated users have at least viewer access
+  const isViewer = currentUser !== null; // All authenticated users have at least viewer access
 
   return (
     <UserContext.Provider value={{ currentUser, setCurrentUser, isAdmin, isMensalista, isViewer }}>

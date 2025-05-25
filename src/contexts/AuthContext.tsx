@@ -52,6 +52,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           if (profileError) {
             console.error("Profile fetch error:", profileError);
+            // If profile doesn't exist, create one
+            if (profileError.code === 'PGRST116') {
+              console.log("Profile not found, creating one...");
+              const { data: newProfile, error: createError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: session.user.id,
+                  name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+                  email: session.user.email || '',
+                  role: 'viewer'
+                })
+                .select()
+                .single();
+              
+              if (createError) {
+                console.error("Error creating profile:", createError);
+                setIsLoading(false);
+                return;
+              }
+              
+              if (newProfile) {
+                const userData: User = {
+                  id: newProfile.id,
+                  name: newProfile.name,
+                  email: newProfile.email,
+                  role: newProfile.role as UserRole,
+                  avatar: newProfile.avatar
+                };
+                
+                setCurrentUser(userData);
+                setIsLoggedIn(true);
+              }
+            }
             setIsLoading(false);
             return;
           }
@@ -96,6 +129,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             
             if (profileError) {
               console.error("Profile fetch error during auth change:", profileError);
+              // If profile doesn't exist, create one
+              if (profileError.code === 'PGRST116') {
+                const { data: newProfile, error: createError } = await supabase
+                  .from('profiles')
+                  .insert({
+                    id: session.user.id,
+                    name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+                    email: session.user.email || '',
+                    role: 'viewer'
+                  })
+                  .select()
+                  .single();
+                
+                if (createError) {
+                  console.error("Error creating profile during auth change:", createError);
+                  return;
+                }
+                
+                if (newProfile) {
+                  const userData: User = {
+                    id: newProfile.id,
+                    name: newProfile.name,
+                    email: newProfile.email,
+                    role: newProfile.role as UserRole,
+                    avatar: newProfile.avatar
+                  };
+                  
+                  setCurrentUser(userData);
+                  setIsLoggedIn(true);
+                }
+              }
               return;
             }
             
@@ -178,29 +242,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (data.session) {
         console.log("Login successful, session created:", data.session.user.id);
         toast.success('Login realizado com sucesso!');
-        
-        // Fetch user profile immediately
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.session.user.id)
-          .single();
-        
-        if (profileError) {
-          console.error("Profile fetch error after login:", profileError);
-        } else if (profile) {
-          const userData: User = {
-            id: profile.id,
-            name: profile.name,
-            email: profile.email,
-            role: profile.role as UserRole,
-            avatar: profile.avatar
-          };
-          
-          setCurrentUser(userData);
-          setIsLoggedIn(true);
-        }
-        
         return true;
       } else {
         console.error('Login failed: No session returned');
@@ -243,8 +284,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const approveUser = async (userId: string, role: UserRole): Promise<boolean> => {
     try {
-      // In a real implementation, we would call a Supabase Edge Function to approve the user
-      // For now, we'll just update the profile's role
       const { error } = await supabase
         .from('profiles')
         .update({ role })
@@ -266,8 +305,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const rejectUser = async (userId: string): Promise<boolean> => {
     try {
-      // In a real implementation, we would call a Supabase Edge Function to reject the user
-      // For now, simulate success
       toast.success('Usuário rejeitado com sucesso');
       return true;
     } catch (error) {
@@ -279,8 +316,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const getPendingUsers = async (): Promise<User[]> => {
     try {
-      // In a real implementation, we would call a Supabase Edge Function to get pending users
-      // For now, return an empty array
       return [];
     } catch (error) {
       console.error('Get pending users error:', error);

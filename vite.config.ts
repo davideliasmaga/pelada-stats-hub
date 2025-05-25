@@ -1,6 +1,5 @@
 
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
@@ -11,7 +10,17 @@ export default defineConfig({
     port: 8080,
   },
   plugins: [
-    react(),
+    {
+      name: 'react',
+      apply: 'build',
+      config() {
+        return {
+          esbuild: {
+            jsx: 'automatic',
+          },
+        };
+      },
+    },
     componentTagger(),
   ],
   resolve: {
@@ -53,6 +62,7 @@ export default defineConfig({
   },
   esbuild: {
     jsxFactory: 'React.createElement',
-    jsxFragment: 'React.Fragment'
+    jsxFragment: 'React.Fragment',
+    jsx: 'automatic',
   },
 });

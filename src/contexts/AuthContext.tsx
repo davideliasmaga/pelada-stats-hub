@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, UserRole } from '@/types';
 import { useUser } from './UserContext';
@@ -43,27 +42,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (session) {
           console.log("Session found:", session.user.id);
-          // Fetch user profile from the public.profiles table 
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
+          // Fetch user profile from the users table instead of profiles
+          const { data: user, error: userError } = await supabase
+            .from('users')
             .select('*')
             .eq('id', session.user.id)
             .single();
           
-          if (profileError) {
-            console.error("Profile fetch error:", profileError);
+          if (userError) {
+            console.error("User fetch error:", userError);
             setIsLoading(false);
             return;
           }
           
-          if (profile) {
-            console.log("Profile found:", profile);
+          if (user) {
+            console.log("User found:", user);
             const userData: User = {
-              id: profile.id,
-              name: profile.name,
-              email: profile.email,
-              role: profile.role as UserRole,
-              avatar: profile.avatar
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role: user.role as UserRole,
+              avatar: user.avatar
             };
             
             setCurrentUser(userData);
@@ -87,25 +86,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (event === 'SIGNED_IN' && session) {
           try {
-            // Fetch user profile
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
+            // Fetch user from users table
+            const { data: user, error: userError } = await supabase
+              .from('users')
               .select('*')
               .eq('id', session.user.id)
               .single();
             
-            if (profileError) {
-              console.error("Profile fetch error during auth change:", profileError);
+            if (userError) {
+              console.error("User fetch error during auth change:", userError);
               return;
             }
             
-            if (profile) {
+            if (user) {
               const userData: User = {
-                id: profile.id,
-                name: profile.name,
-                email: profile.email,
-                role: profile.role as UserRole,
-                avatar: profile.avatar
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role as UserRole,
+                avatar: user.avatar
               };
               
               setCurrentUser(userData);
@@ -132,7 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loadUsers = async () => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('users')
         .select('*');
       
       if (error) {

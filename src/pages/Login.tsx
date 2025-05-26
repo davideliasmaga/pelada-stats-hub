@@ -1,38 +1,32 @@
-
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { LogoWhiteBg } from "@/assets/logo-white-bg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MailIcon, LockIcon, Loader2 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(true);
   const [email, setEmail] = useState("davideliasmagalhaes@gmail.com");
-  const [password, setPassword] = useState("admin123456");
+  const [password, setPassword] = useState("admin123");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login, isLoggedIn } = useAuth();
   
   // Check if user is already logged in
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          navigate("/");
-        } 
-      } catch (err) {
-        console.error("Session check error:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    checkSession();
-  }, [navigate]);
+    if (isLoggedIn) {
+      // Se estiver logado, redireciona para a página inicial ou para a página que tentou acessar
+      const from = location.state?.from?.pathname || "/";
+      navigate(from, { replace: true });
+    } else {
+      setIsLoading(false);
+    }
+  }, [isLoggedIn, navigate, location]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,21 +34,12 @@ export default function Login() {
     setIsSubmitting(true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) {
-        setError(error.message);
-        toast.error(`Erro no login: ${error.message}`);
-      } else if (data.session) {
-        toast.success('Login realizado com sucesso!');
-        navigate("/", { replace: true });
+      const success = await login(email, password);
+      if (!success) {
+        setError("Falha ao realizar login. Verifique suas credenciais.");
       }
     } catch (err: any) {
       setError(err.message || "Ocorreu um erro ao processar o login");
-      toast.error('Erro ao realizar login');
     } finally {
       setIsSubmitting(false);
     }

@@ -172,8 +172,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (data.session) {
         console.log("Login successful, session created:", data.session.user.id);
-        toast.success('Login realizado com sucesso!');
         
+        // Fetch user from users table
         const { data: user, error: userError } = await supabase
           .from('users')
           .select('*')
@@ -182,7 +182,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (userError) {
           console.error("User fetch error after login:", userError);
-        } else if (user) {
+          toast.error('Erro ao carregar dados do usuário');
+          return false;
+        }
+        
+        if (user) {
+          console.log("User found after login:", user);
           const userData: User = {
             id: user.id,
             name: user.name,
@@ -191,11 +196,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             avatar: user.avatar
           };
           
+          // Primeiro atualiza o usuário atual
           setCurrentUser(userData);
+          // Depois atualiza o estado de login
           setIsLoggedIn(true);
+          // Por fim, mostra a mensagem de sucesso
+          toast.success('Login realizado com sucesso!');
+          
+          return true;
+        } else {
+          console.error('User not found after login');
+          toast.error('Usuário não encontrado');
+          return false;
         }
-        
-        return true;
       } else {
         console.error('Login failed: No session returned');
         toast.error('Falha ao realizar login: Nenhuma sessão retornada');

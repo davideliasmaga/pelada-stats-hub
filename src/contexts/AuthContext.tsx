@@ -31,7 +31,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const checkAuth = async () => {
       try {
         console.log("Checking authentication status...");
-        // Get the current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -42,7 +41,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (session) {
           console.log("Session found:", session.user.id);
-          // Fetch user profile from the users table instead of profiles
           const { data: user, error: userError } = await supabase
             .from('users')
             .select('*')
@@ -79,14 +77,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state changed:", event, session?.user?.id);
         
         if (event === 'SIGNED_IN' && session) {
           try {
-            // Fetch user from users table
             const { data: user, error: userError } = await supabase
               .from('users')
               .select('*')
@@ -178,22 +174,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("Login successful, session created:", data.session.user.id);
         toast.success('Login realizado com sucesso!');
         
-        // Fetch user profile immediately
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
+        const { data: user, error: userError } = await supabase
+          .from('users')
           .select('*')
           .eq('id', data.session.user.id)
           .single();
         
-        if (profileError) {
-          console.error("Profile fetch error after login:", profileError);
-        } else if (profile) {
+        if (userError) {
+          console.error("User fetch error after login:", userError);
+        } else if (user) {
           const userData: User = {
-            id: profile.id,
-            name: profile.name,
-            email: profile.email,
-            role: profile.role as UserRole,
-            avatar: profile.avatar
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role as UserRole,
+            avatar: user.avatar
           };
           
           setCurrentUser(userData);
@@ -242,10 +237,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const approveUser = async (userId: string, role: UserRole): Promise<boolean> => {
     try {
-      // In a real implementation, we would call a Supabase Edge Function to approve the user
-      // For now, we'll just update the profile's role
       const { error } = await supabase
-        .from('profiles')
+        .from('users')
         .update({ role })
         .eq('id', userId);
       
@@ -265,8 +258,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const rejectUser = async (userId: string): Promise<boolean> => {
     try {
-      // In a real implementation, we would call a Supabase Edge Function to reject the user
-      // For now, simulate success
       toast.success('Usuário rejeitado com sucesso');
       return true;
     } catch (error) {
@@ -278,8 +269,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const getPendingUsers = async (): Promise<User[]> => {
     try {
-      // In a real implementation, we would call a Supabase Edge Function to get pending users
-      // For now, return an empty array
       return [];
     } catch (error) {
       console.error('Get pending users error:', error);

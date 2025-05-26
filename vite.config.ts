@@ -1,6 +1,5 @@
 
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
@@ -11,7 +10,17 @@ export default defineConfig({
     port: 8080,
   },
   plugins: [
-    react(),
+    {
+      name: 'react',
+      apply: 'build',
+      config() {
+        return {
+          esbuild: {
+            jsx: 'automatic',
+          },
+        };
+      },
+    },
     componentTagger(),
   ],
   resolve: {
@@ -31,7 +40,7 @@ export default defineConfig({
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name].[ext]',
       },
-      plugins: [],
+      external: [],
       treeshake: false,
       context: 'globalThis',
     },
@@ -42,12 +51,18 @@ export default defineConfig({
     reportCompressedSize: false,
     cssCodeSplit: false,
     target: 'es2015',
+    commonjsOptions: {
+      include: [/node_modules/],
+      extensions: ['.js', '.cjs'],
+    },
   },
   optimizeDeps: {
-    disabled: false
+    disabled: false,
+    include: ['react', 'react-dom']
   },
   esbuild: {
     jsxFactory: 'React.createElement',
-    jsxFragment: 'React.Fragment'
+    jsxFragment: 'React.Fragment',
+    jsx: 'automatic',
   },
 });

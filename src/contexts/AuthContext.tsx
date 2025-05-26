@@ -47,31 +47,68 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (session) {
           console.log("Session found:", session.user.id);
-          const { data: user, error: userError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
           
-          if (!mounted) return;
-          
-          if (userError) {
-            console.error("User fetch error:", userError);
-            setIsLoading(false);
-            return;
-          }
-          
-          if (user) {
-            console.log("User found:", user);
-            const userData: User = {
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              role: user.role as UserRole,
-              avatar: user.avatar
-            };
+          // Try to get user profile, but handle cases where it might not exist
+          try {
+            const { data: user, error: userError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no data
             
-            setCurrentUser(userData);
+            if (!mounted) return;
+            
+            if (userError) {
+              console.error("User fetch error:", userError);
+              // Don't block login if profile fetch fails
+            } else if (user) {
+              console.log("User found:", user);
+              const userData: User = {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role as UserRole,
+                avatar: user.avatar
+              };
+              
+              setCurrentUser(userData);
+              setIsLoggedIn(true);
+            } else {
+              console.log("No user profile found, but session exists. Creating profile...");
+              // Create profile if it doesn't exist
+              const { data: newUser, error: createError } = await supabase
+                .from('profiles')
+                .insert([
+                  {
+                    id: session.user.id,
+                    email: session.user.email,
+                    name: session.user.email?.split('@')[0] || 'Usuário',
+                    role: 'viewer'
+                  }
+                ])
+                .select()
+                .single();
+              
+              if (!mounted) return;
+              
+              if (createError) {
+                console.error("Error creating profile:", createError);
+              } else if (newUser) {
+                const userData: User = {
+                  id: newUser.id,
+                  name: newUser.name,
+                  email: newUser.email,
+                  role: newUser.role as UserRole,
+                  avatar: newUser.avatar
+                };
+                
+                setCurrentUser(userData);
+                setIsLoggedIn(true);
+              }
+            }
+          } catch (profileError) {
+            console.error("Profile handling error:", profileError);
+            // Still set as logged in even if profile handling fails
             setIsLoggedIn(true);
           }
         } else {
@@ -94,43 +131,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("Auth state changed:", event, session?.user?.id);
         
         if (event === 'SIGNED_IN' && session) {
-          try {
-            setIsLoading(true);
-            const { data: user, error: userError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-            
-            if (!mounted) return;
-            
-            if (userError) {
-              console.error("User fetch error during auth change:", userError);
-              setIsLoading(false);
-              return;
-            }
-            
-            if (user) {
-              const userData: User = {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role as UserRole,
-                avatar: user.avatar
-              };
-              
-              setCurrentUser(userData);
-              setIsLoggedIn(true);
-            }
-            
-            if (mounted) {
-              setIsLoading(false);
-            }
-          } catch (error) {
-            console.error("Error during auth change:", error);
-            if (mounted) {
-              setIsLoading(false);
-            }
+          setIsLoggedIn(true);
+          if (mounted) {
+            setIsLoading(false);
           }
         } else if (event === 'SIGNED_OUT') {
           setCurrentUser(null);
@@ -197,80 +200,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (data.session) {
         console.log("Login successful, session created:", data.session.user.id);
-        
-        // Primeiro verifica se o usuário existe na tabela profiles
-        const { data: existingUser, error: checkError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.session.user.id)
-          .single();
-        
-        if (checkError) {
-          console.error("Error checking user existence:", checkError);
-          
-          // Se o usuário não existe, cria um novo
-          if (checkError.code === 'PGRST116') {
-            console.log("User not found in profiles table, creating new user...");
-            const { data: newUser, error: createError } = await supabase
-              .from('profiles')
-              .insert([
-                {
-                  id: data.session.user.id,
-                  email: data.session.user.email,
-                  name: data.session.user.email?.split('@')[0] || 'Usuário',
-                  role: 'viewer',
-                  avatar: null
-                }
-              ])
-              .select()
-              .single();
-            
-            if (createError) {
-              console.error("Error creating user:", createError);
-              toast.error('Erro ao criar usuário');
-              return false;
-            }
-            
-            if (newUser) {
-              console.log("New user created:", newUser);
-              const userData: User = {
-                id: newUser.id,
-                name: newUser.name,
-                email: newUser.email,
-                role: newUser.role as UserRole,
-                avatar: newUser.avatar
-              };
-              
-              setCurrentUser(userData);
-              setIsLoggedIn(true);
-              toast.success('Login realizado com sucesso!');
-              return true;
-            }
-          }
-          
-          toast.error('Erro ao carregar dados do usuário');
-          return false;
-        }
-        
-        if (existingUser) {
-          console.log("Existing user found:", existingUser);
-          const userData: User = {
-            id: existingUser.id,
-            name: existingUser.name,
-            email: existingUser.email,
-            role: existingUser.role as UserRole,
-            avatar: existingUser.avatar
-          };
-          
-          setCurrentUser(userData);
-          setIsLoggedIn(true);
-          toast.success('Login realizado com sucesso!');
-          return true;
-        } else {
-          console.error('User not found after login');
-          toast.error('Usuário não encontrado');
-          return false;
-        }
+        toast.success('Login realizado com sucesso!');
+        return true;
       } else {
         console.error('Login failed: No session returned');
         toast.error('Falha ao realizar login: Nenhuma sessão retornada');

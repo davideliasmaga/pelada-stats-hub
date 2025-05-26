@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (session) {
           console.log("Session found:", session.user.id);
           const { data: user, error: userError } = await supabase
-            .from('users')
+            .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
@@ -97,7 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           try {
             setIsLoading(true);
             const { data: user, error: userError } = await supabase
-              .from('users')
+              .from('profiles')
               .select('*')
               .eq('id', session.user.id)
               .single();
@@ -152,7 +152,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loadUsers = async () => {
     try {
       const { data, error } = await supabase
-        .from('users')
+        .from('profiles')
         .select('*');
       
       if (error) {
@@ -198,9 +198,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (data.session) {
         console.log("Login successful, session created:", data.session.user.id);
         
-        // Primeiro verifica se o usuário existe na tabela users
+        // Primeiro verifica se o usuário existe na tabela profiles
         const { data: existingUser, error: checkError } = await supabase
-          .from('users')
+          .from('profiles')
           .select('*')
           .eq('id', data.session.user.id)
           .single();
@@ -210,9 +210,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           // Se o usuário não existe, cria um novo
           if (checkError.code === 'PGRST116') {
-            console.log("User not found in users table, creating new user...");
+            console.log("User not found in profiles table, creating new user...");
             const { data: newUser, error: createError } = await supabase
-              .from('users')
+              .from('profiles')
               .insert([
                 {
                   id: data.session.user.id,
@@ -313,7 +313,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const approveUser = async (userId: string, role: UserRole): Promise<boolean> => {
     try {
       const { error } = await supabase
-        .from('users')
+        .from('profiles')
         .update({ role })
         .eq('id', userId);
       

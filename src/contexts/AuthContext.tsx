@@ -198,36 +198,73 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (data.session) {
         console.log("Login successful, session created:", data.session.user.id);
         
-        // Fetch user from users table
-        const { data: user, error: userError } = await supabase
+        // Primeiro verifica se o usuário existe na tabela users
+        const { data: existingUser, error: checkError } = await supabase
           .from('users')
           .select('*')
           .eq('id', data.session.user.id)
           .single();
         
-        if (userError) {
-          console.error("User fetch error after login:", userError);
+        if (checkError) {
+          console.error("Error checking user existence:", checkError);
+          
+          // Se o usuário não existe, cria um novo
+          if (checkError.code === 'PGRST116') {
+            console.log("User not found in users table, creating new user...");
+            const { data: newUser, error: createError } = await supabase
+              .from('users')
+              .insert([
+                {
+                  id: data.session.user.id,
+                  email: data.session.user.email,
+                  name: data.session.user.email?.split('@')[0] || 'Usuário',
+                  role: 'viewer',
+                  avatar: null
+                }
+              ])
+              .select()
+              .single();
+            
+            if (createError) {
+              console.error("Error creating user:", createError);
+              toast.error('Erro ao criar usuário');
+              return false;
+            }
+            
+            if (newUser) {
+              console.log("New user created:", newUser);
+              const userData: User = {
+                id: newUser.id,
+                name: newUser.name,
+                email: newUser.email,
+                role: newUser.role as UserRole,
+                avatar: newUser.avatar
+              };
+              
+              setCurrentUser(userData);
+              setIsLoggedIn(true);
+              toast.success('Login realizado com sucesso!');
+              return true;
+            }
+          }
+          
           toast.error('Erro ao carregar dados do usuário');
           return false;
         }
         
-        if (user) {
-          console.log("User found after login:", user);
+        if (existingUser) {
+          console.log("Existing user found:", existingUser);
           const userData: User = {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role as UserRole,
-            avatar: user.avatar
+            id: existingUser.id,
+            name: existingUser.name,
+            email: existingUser.email,
+            role: existingUser.role as UserRole,
+            avatar: existingUser.avatar
           };
           
-          // Primeiro atualiza o usuário atual
           setCurrentUser(userData);
-          // Depois atualiza o estado de login
           setIsLoggedIn(true);
-          // Por fim, mostra a mensagem de sucesso
           toast.success('Login realizado com sucesso!');
-          
           return true;
         } else {
           console.error('User not found after login');

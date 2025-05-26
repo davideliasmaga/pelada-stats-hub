@@ -28,10 +28,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Check if user is already logged in on mount
   useEffect(() => {
+    let mounted = true;
+    
     const checkAuth = async () => {
       try {
         console.log("Checking authentication status...");
+        setIsLoading(true);
+        
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
         
         if (sessionError) {
           console.error("Session error:", sessionError);
@@ -46,6 +52,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .select('*')
             .eq('id', session.user.id)
             .single();
+          
+          if (!mounted) return;
           
           if (userError) {
             console.error("User fetch error:", userError);
@@ -70,10 +78,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.log("No active session found");
         }
         
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       } catch (error) {
         console.error("Auth check error:", error);
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -83,14 +95,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (event === 'SIGNED_IN' && session) {
           try {
+            setIsLoading(true);
             const { data: user, error: userError } = await supabase
               .from('users')
               .select('*')
               .eq('id', session.user.id)
               .single();
             
+            if (!mounted) return;
+            
             if (userError) {
               console.error("User fetch error during auth change:", userError);
+              setIsLoading(false);
               return;
             }
             
@@ -106,12 +122,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setCurrentUser(userData);
               setIsLoggedIn(true);
             }
+            
+            if (mounted) {
+              setIsLoading(false);
+            }
           } catch (error) {
             console.error("Error during auth change:", error);
+            if (mounted) {
+              setIsLoading(false);
+            }
           }
         } else if (event === 'SIGNED_OUT') {
           setCurrentUser(null);
           setIsLoggedIn(false);
+          setIsLoading(false);
         }
       }
     );
@@ -119,6 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkAuth();
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [setCurrentUser]);

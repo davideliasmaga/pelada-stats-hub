@@ -15,38 +15,50 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isLoggedIn } = useAuth();
+  const { login, isLoggedIn, isLoading: authLoading } = useAuth();
   
   // Check if user is already logged in
   useEffect(() => {
+    console.log("Login component mounted, auth state:", { isLoggedIn, authLoading });
+    
+    if (authLoading) {
+      console.log("Auth is still loading...");
+      return;
+    }
+    
     if (isLoggedIn) {
-      // Se estiver logado, redireciona para a página inicial ou para a página que tentou acessar
+      console.log("User is logged in, redirecting...");
       const from = location.state?.from?.pathname || "/";
       navigate(from, { replace: true });
     } else {
+      console.log("User is not logged in, showing login form");
       setIsLoading(false);
     }
-  }, [isLoggedIn, navigate, location]);
+  }, [isLoggedIn, authLoading, navigate, location]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Login attempt with:", { email });
     setError(null);
     setIsSubmitting(true);
     
     try {
       const success = await login(email, password);
+      console.log("Login result:", { success });
       if (!success) {
         setError("Falha ao realizar login. Verifique suas credenciais.");
       }
     } catch (err: any) {
+      console.error("Login error:", err);
       setError(err.message || "Ocorreu um erro ao processar o login");
     } finally {
       setIsSubmitting(false);
     }
   };
   
-  // Show loading state
-  if (isLoading) {
+  // Show loading state while checking auth
+  if (isLoading || authLoading) {
+    console.log("Showing loading state:", { isLoading, authLoading });
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <Loader2 className="h-8 w-8 animate-spin text-gray-500" />

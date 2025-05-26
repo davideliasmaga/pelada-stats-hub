@@ -26,6 +26,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [users, setUsers] = useState<User[]>([]);
   const { setCurrentUser } = useUser();
 
+  // Function to fetch user profile
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: user, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("User fetch error:", error);
+        return null;
+      }
+      
+      if (user) {
+        const userData: User = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role as UserRole,
+          avatar: user.avatar
+        };
+        return userData;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Profile fetch error:", error);
+      return null;
+    }
+  };
+
   // Check if user is already logged in on mount
   useEffect(() => {
     let mounted = true;
@@ -48,68 +80,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (session) {
           console.log("Session found:", session.user.id);
           
-          // Try to get user profile, but handle cases where it might not exist
-          try {
-            const { data: user, error: userError } = await supabase
+          const userData = await fetchUserProfile(session.user.id);
+          
+          if (!mounted) return;
+          
+          if (userData) {
+            setCurrentUser(userData);
+            setIsLoggedIn(true);
+          } else {
+            console.log("No user profile found, but session exists. Creating profile...");
+            // Create profile if it doesn't exist
+            const { data: newUser, error: createError } = await supabase
               .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no data
+              .insert([
+                {
+                  id: session.user.id,
+                  email: session.user.email,
+                  name: session.user.email?.split('@')[0] || 'Usuário',
+                  role: 'viewer'
+                }
+              ])
+              .select()
+              .single();
             
             if (!mounted) return;
             
-            if (userError) {
-              console.error("User fetch error:", userError);
-              // Don't block login if profile fetch fails
-            } else if (user) {
-              console.log("User found:", user);
-              const userData: User = {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role as UserRole,
-                avatar: user.avatar
+            if (createError) {
+              console.error("Error creating profile:", createError);
+            } else if (newUser) {
+              const newUserData: User = {
+                id: newUser.id,
+                name: newUser.name,
+                email: newUser.email,
+                role: newUser.role as UserRole,
+                avatar: newUser.avatar
               };
               
-              setCurrentUser(userData);
+              setCurrentUser(newUserData);
               setIsLoggedIn(true);
-            } else {
-              console.log("No user profile found, but session exists. Creating profile...");
-              // Create profile if it doesn't exist
-              const { data: newUser, error: createError } = await supabase
-                .from('profiles')
-                .insert([
-                  {
-                    id: session.user.id,
-                    email: session.user.email,
-                    name: session.user.email?.split('@')[0] || 'Usuário',
-                    role: 'viewer'
-                  }
-                ])
-                .select()
-                .single();
-              
-              if (!mounted) return;
-              
-              if (createError) {
-                console.error("Error creating profile:", createError);
-              } else if (newUser) {
-                const userData: User = {
-                  id: newUser.id,
-                  name: newUser.name,
-                  email: newUser.email,
-                  role: newUser.role as UserRole,
-                  avatar: newUser.avatar
-                };
-                
-                setCurrentUser(userData);
-                setIsLoggedIn(true);
-              }
             }
-          } catch (profileError) {
-            console.error("Profile handling error:", profileError);
-            // Still set as logged in even if profile handling fails
-            setIsLoggedIn(true);
           }
         } else {
           console.log("No active session found");
@@ -131,6 +140,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("Auth state changed:", event, session?.user?.id);
         
         if (event === 'SIGNED_IN' && session) {
+          // Fetch fresh user data on login
+          const userData = await fetchUserProfile(session.user.id);
+          if (userData) {
+            setCurrentUser(userData);
+          }
           setIsLoggedIn(true);
           if (mounted) {
             setIsLoading(false);

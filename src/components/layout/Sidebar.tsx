@@ -15,7 +15,7 @@ import { useUser } from "@/contexts/UserContext";
 import { LogoWhiteBg } from "@/assets/logo-white-bg";
 
 const Sidebar = () => {
-  const { isAdmin, isMensalista } = useUser();
+  const { isAdmin, isMensalista, currentUser } = useUser();
   const location = useLocation();
   
   const isActive = (path: string) => location.pathname === path;
@@ -32,6 +32,7 @@ const Sidebar = () => {
       
       <SidebarContent>
         <SidebarMenu>
+          {/* Página inicial - todos os usuários podem ver */}
           <SidebarMenuItem>
             <SidebarMenuButton asChild className={cn(
               "flex items-center gap-3 px-4 py-2 rounded-full",
@@ -44,6 +45,7 @@ const Sidebar = () => {
             </SidebarMenuButton>
           </SidebarMenuItem>
           
+          {/* Artilharia - todos os usuários podem ver */}
           <SidebarMenuItem>
             <SidebarMenuButton asChild className={cn(
               "flex items-center gap-3 px-4 py-2 rounded-full",
@@ -56,7 +58,8 @@ const Sidebar = () => {
             </SidebarMenuButton>
           </SidebarMenuItem>
           
-          {isMensalista && (
+          {/* Financeiro - apenas mensalista e admin */}
+          {(isMensalista || isAdmin) && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild className={cn(
                 "flex items-center gap-3 px-4 py-2 rounded-full",
@@ -70,6 +73,7 @@ const Sidebar = () => {
             </SidebarMenuItem>
           )}
           
+          {/* Funcionalidades exclusivas para admin */}
           {isAdmin && (
             <>
               <SidebarMenuItem>

@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { UserProvider } from "./contexts/UserContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import RequireRole from "./components/auth/RequireRole";
 import Index from "./pages/Index";
 import Artilharia from "./pages/Artilharia";
 import Financeiro from "./pages/Financeiro";
@@ -54,35 +56,51 @@ const App = () => (
               <Route path="/create-password" element={<CreatePassword />} />
               <Route path="/register" element={<Register />} />
               
-              {/* Protected routes */}
+              {/* Protected routes - Todos os usuários */}
               <Route path="/" element={
                 <RequireAuth>
-                  <Index />
+                  <RequireRole allowedRoles={['admin', 'mensalista', 'viewer']}>
+                    <Index />
+                  </RequireRole>
                 </RequireAuth>
               } />
               <Route path="/artilharia" element={
                 <RequireAuth>
-                  <Artilharia />
+                  <RequireRole allowedRoles={['admin', 'mensalista', 'viewer']}>
+                    <Artilharia />
+                  </RequireRole>
                 </RequireAuth>
               } />
+              
+              {/* Protected routes - Mensalista e Admin apenas */}
               <Route path="/financeiro" element={
                 <RequireAuth>
-                  <Financeiro />
+                  <RequireRole allowedRoles={['admin', 'mensalista']}>
+                    <Financeiro />
+                  </RequireRole>
                 </RequireAuth>
               } />
+              
+              {/* Protected routes - Admin apenas */}
               <Route path="/jogadores" element={
                 <RequireAuth>
-                  <Jogadores />
+                  <RequireRole allowedRoles={['admin']}>
+                    <Jogadores />
+                  </RequireRole>
                 </RequireAuth>
               } />
               <Route path="/jogos" element={
                 <RequireAuth>
-                  <Jogos />
+                  <RequireRole allowedRoles={['admin']}>
+                    <Jogos />
+                  </RequireRole>
                 </RequireAuth>
               } />
               <Route path="/admin" element={
                 <RequireAuth>
-                  <Admin />
+                  <RequireRole allowedRoles={['admin']}>
+                    <Admin />
+                  </RequireRole>
                 </RequireAuth>
               } />
               <Route path="*" element={

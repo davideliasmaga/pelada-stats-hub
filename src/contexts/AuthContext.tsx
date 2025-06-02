@@ -92,85 +92,81 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    let mounted = true;
-    let authListener: any;
+    let isMounted = true;
     
     const initializeAuth = async () => {
       try {
         console.log("Initializing auth...");
-        setIsLoading(true);
         
-        // Set up auth state listener first
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            console.log("Auth state changed:", event, session?.user?.id);
-            
-            if (!mounted) return;
-            
-            try {
-              if (event === 'SIGNED_IN' && session?.user) {
-                const userData = await getOrCreateProfile(session.user);
-                setCurrentUser(userData);
-                setIsLoggedIn(true);
-                console.log("User signed in:", userData);
-              } else if (event === 'SIGNED_OUT') {
-                setCurrentUser(null);
-                setIsLoggedIn(false);
-                console.log("User signed out");
-              }
-            } catch (error) {
-              console.error("Error in auth state change:", error);
-            } finally {
-              setIsLoading(false);
-            }
+        // Check for existing session first
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          if (isMounted) {
+            setIsLoading(false);
           }
-        );
-        
-        authListener = subscription;
-        
-        // Then check for existing session
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Session error:", error);
-          setIsLoading(false);
           return;
         }
         
-        if (session?.user) {
+        if (session?.user && isMounted) {
           console.log("Found active session for user:", session.user.id);
           const userData = await getOrCreateProfile(session.user);
           
-          if (mounted) {
+          if (isMounted) {
             setCurrentUser(userData);
             setIsLoggedIn(true);
             console.log("Auth initialized successfully with user:", userData);
           }
-        } else {
+        } else if (isMounted) {
           console.log("No active session found");
-          if (mounted) {
-            setIsLoggedIn(false);
-          }
+          setIsLoggedIn(false);
         }
         
-        if (mounted) {
+        if (isMounted) {
           setIsLoading(false);
         }
       } catch (error) {
         console.error("Auth initialization error:", error);
-        if (mounted) {
+        if (isMounted) {
           setIsLoading(false);
         }
       }
     };
 
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth state changed:", event, session?.user?.id);
+        
+        if (!isMounted) return;
+        
+        try {
+          if (event === 'SIGNED_IN' && session?.user) {
+            const userData = await getOrCreateProfile(session.user);
+            setCurrentUser(userData);
+            setIsLoggedIn(true);
+            setIsLoading(false);
+            console.log("User signed in:", userData);
+          } else if (event === 'SIGNED_OUT') {
+            setCurrentUser(null);
+            setIsLoggedIn(false);
+            setIsLoading(false);
+            console.log("User signed out");
+          }
+        } catch (error) {
+          console.error("Error in auth state change:", error);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    // Initialize auth
     initializeAuth();
 
     return () => {
-      mounted = false;
-      if (authListener) {
-        authListener.unsubscribe();
-      }
+      isMounted = false;
+      subscription.unsubscribe();
     };
   }, [setCurrentUser]);
 
@@ -194,6 +190,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (data.session) {
         console.log("Login successful");
         toast.success('Login realizado com sucesso!');
+        // Don't set loading to false here, let the auth state change handle it
         return true;
       } else {
         console.error('Login failed: No session returned');

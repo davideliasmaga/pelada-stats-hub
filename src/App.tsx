@@ -17,10 +17,10 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import CreatePassword from "./pages/CreatePassword";
 import Register from "./pages/Register";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
-// RequireAuth component to protect routes
 interface RequireAuthProps {
   children: JSX.Element;
 }
@@ -29,13 +29,20 @@ const RequireAuth = ({ children }: RequireAuthProps) => {
   const { isLoggedIn, isLoading } = useAuth();
   const location = useLocation();
 
+  console.log("RequireAuth state:", { isLoggedIn, isLoading, pathname: location.pathname });
+
   if (isLoading) {
-    // Don't redirect while still checking auth state
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-500 mx-auto mb-4" />
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!isLoggedIn) {
-    // Redirect to login page, but save the current location
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

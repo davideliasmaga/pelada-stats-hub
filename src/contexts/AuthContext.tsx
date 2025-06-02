@@ -26,17 +26,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [users, setUsers] = useState<User[]>([]);
   const { setCurrentUser } = useUser();
 
-  // Simplified function to get or create user profile
   const getOrCreateProfile = async (authUser: any) => {
     try {
       console.log("Getting profile for user:", authUser.id);
       
-      // First try to get existing profile
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
         .maybeSingle();
+      
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error("Error fetching profile:", fetchError);
+        throw fetchError;
+      }
       
       if (existingProfile) {
         console.log("Found existing profile:", existingProfile);
@@ -49,7 +52,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
       }
       
-      // If no profile exists, create one
       console.log("Creating new profile for user");
       const newProfile = {
         id: authUser.id,
@@ -58,15 +60,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         role: 'viewer' as UserRole
       };
       
-      const { data: createdProfile, error } = await supabase
+      const { data: createdProfile, error: createError } = await supabase
         .from('profiles')
         .insert([newProfile])
         .select()
         .single();
       
-      if (error) {
-        console.error("Error creating profile:", error);
-        // Return basic profile even if creation fails
+      if (createError) {
+        console.error("Error creating profile:", createError);
         return newProfile;
       }
       
@@ -81,7 +82,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
     } catch (error) {
       console.error("Error in getOrCreateProfile:", error);
-      // Return basic profile data as fallback
       return {
         id: authUser.id,
         email: authUser.email || '',
@@ -91,28 +91,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Initialize auth state
   useEffect(() => {
     let mounted = true;
+    let authListener: any;
     
     const initializeAuth = async () => {
       try {
         console.log("Initializing auth...");
+        setIsLoading(true);
         
-        // Get current session
+        // Set up auth state listener first
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log("Auth state changed:", event, session?.user?.id);
+            
+            if (!mounted) return;
+            
+            try {
+              if (event === 'SIGNED_IN' && session?.user) {
+                const userData = await getOrCreateProfile(session.user);
+                setCurrentUser(userData);
+                setIsLoggedIn(true);
+                console.log("User signed in:", userData);
+              } else if (event === 'SIGNED_OUT') {
+                setCurrentUser(null);
+                setIsLoggedIn(false);
+                console.log("User signed out");
+              }
+            } catch (error) {
+              console.error("Error in auth state change:", error);
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        );
+        
+        authListener = subscription;
+        
+        // Then check for existing session
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error("Session error:", error);
-          if (mounted) {
-            setIsLoading(false);
-          }
+          setIsLoading(false);
           return;
         }
         
         if (session?.user) {
           console.log("Found active session for user:", session.user.id);
-          
           const userData = await getOrCreateProfile(session.user);
           
           if (mounted) {
@@ -122,6 +148,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } else {
           console.log("No active session found");
+          if (mounted) {
+            setIsLoggedIn(false);
+          }
         }
         
         if (mounted) {
@@ -135,41 +164,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state changed:", event, session?.user?.id);
-        
-        if (event === 'SIGNED_IN' && session?.user) {
-          const userData = await getOrCreateProfile(session.user);
-          if (mounted) {
-            setCurrentUser(userData);
-            setIsLoggedIn(true);
-            setIsLoading(false);
-            console.log("User signed in:", userData);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          if (mounted) {
-            setCurrentUser(null);
-            setIsLoggedIn(false);
-            setIsLoading(false);
-            console.log("User signed out");
-          }
-        }
-      }
-    );
-
     initializeAuth();
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      if (authListener) {
+        authListener.unsubscribe();
+      }
     };
   }, [setCurrentUser]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       console.log("Attempting login with email:", email);
+      setIsLoading(true);
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -179,6 +187,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) {
         console.error('Login error:', error);
         toast.error(`Erro no login: ${error.message}`);
+        setIsLoading(false);
         return false;
       }
 
@@ -189,11 +198,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         console.error('Login failed: No session returned');
         toast.error('Falha ao realizar login');
+        setIsLoading(false);
         return false;
       }
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Erro ao realizar login');
+      setIsLoading(false);
       return false;
     }
   };

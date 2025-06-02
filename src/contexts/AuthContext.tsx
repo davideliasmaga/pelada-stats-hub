@@ -26,106 +26,99 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [users, setUsers] = useState<User[]>([]);
   const { setCurrentUser } = useUser();
 
-  // Function to fetch user profile with error handling
-  const fetchUserProfile = async (userId: string) => {
+  // Simplified function to get or create user profile
+  const getOrCreateProfile = async (authUser: any) => {
     try {
-      console.log("Fetching user profile for:", userId);
+      console.log("Getting profile for user:", authUser.id);
       
-      // Try to get profile directly first
-      const { data: user, error } = await supabase
+      // First try to get existing profile
+      const { data: existingProfile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('id', authUser.id)
         .maybeSingle();
       
-      if (error) {
-        console.error("Profile fetch error:", error);
-        
-        // If error is related to RLS, try to get session user data
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser) {
-          console.log("Creating profile for new user");
-          // Create a basic profile
-          const newProfile = {
-            id: authUser.id,
-            email: authUser.email || '',
-            name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário',
-            role: 'viewer' as UserRole
-          };
-          
-          try {
-            const { data: createdProfile, error: createError } = await supabase
-              .from('profiles')
-              .insert([newProfile])
-              .select()
-              .single();
-            
-            if (!createError && createdProfile) {
-              return {
-                id: createdProfile.id,
-                name: createdProfile.name,
-                email: createdProfile.email,
-                role: createdProfile.role as UserRole,
-                avatar: createdProfile.avatar
-              };
-            }
-          } catch (createErr) {
-            console.error("Error creating profile:", createErr);
-          }
-          
-          // Return basic user data even if profile creation fails
-          return newProfile;
-        }
-        return null;
-      }
-      
-      if (user) {
-        const userData: User = {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role as UserRole,
-          avatar: user.avatar
+      if (existingProfile) {
+        console.log("Found existing profile:", existingProfile);
+        return {
+          id: existingProfile.id,
+          name: existingProfile.name,
+          email: existingProfile.email,
+          role: existingProfile.role as UserRole,
+          avatar: existingProfile.avatar
         };
-        return userData;
       }
       
-      return null;
+      // If no profile exists, create one
+      console.log("Creating new profile for user");
+      const newProfile = {
+        id: authUser.id,
+        email: authUser.email || '',
+        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário',
+        role: 'viewer' as UserRole
+      };
+      
+      const { data: createdProfile, error } = await supabase
+        .from('profiles')
+        .insert([newProfile])
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("Error creating profile:", error);
+        // Return basic profile even if creation fails
+        return newProfile;
+      }
+      
+      console.log("Created new profile:", createdProfile);
+      return {
+        id: createdProfile.id,
+        name: createdProfile.name,
+        email: createdProfile.email,
+        role: createdProfile.role as UserRole,
+        avatar: createdProfile.avatar
+      };
+      
     } catch (error) {
-      console.error("Profile fetch error:", error);
-      return null;
+      console.error("Error in getOrCreateProfile:", error);
+      // Return basic profile data as fallback
+      return {
+        id: authUser.id,
+        email: authUser.email || '',
+        name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário',
+        role: 'viewer' as UserRole
+      };
     }
   };
 
-  // Check if user is already logged in on mount
+  // Initialize auth state
   useEffect(() => {
     let mounted = true;
     
-    const checkAuth = async () => {
+    const initializeAuth = async () => {
       try {
-        console.log("Checking authentication status...");
-        setIsLoading(true);
+        console.log("Initializing auth...");
         
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        // Get current session
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (!mounted) return;
-        
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          setIsLoading(false);
+        if (error) {
+          console.error("Session error:", error);
+          if (mounted) {
+            setIsLoading(false);
+          }
           return;
         }
         
-        if (session) {
-          console.log("Session found:", session.user.id);
+        if (session?.user) {
+          console.log("Found active session for user:", session.user.id);
           
-          const userData = await fetchUserProfile(session.user.id);
+          const userData = await getOrCreateProfile(session.user);
           
-          if (!mounted) return;
-          
-          if (userData) {
+          if (mounted) {
             setCurrentUser(userData);
             setIsLoggedIn(true);
+            console.log("Auth initialized successfully with user:", userData);
           }
         } else {
           console.log("No active session found");
@@ -135,74 +128,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsLoading(false);
         }
       } catch (error) {
-        console.error("Auth check error:", error);
+        console.error("Auth initialization error:", error);
         if (mounted) {
           setIsLoading(false);
         }
       }
     };
 
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state changed:", event, session?.user?.id);
         
-        if (event === 'SIGNED_IN' && session) {
-          // Fetch fresh user data on login
-          const userData = await fetchUserProfile(session.user.id);
-          if (userData) {
-            setCurrentUser(userData);
-          }
-          setIsLoggedIn(true);
+        if (event === 'SIGNED_IN' && session?.user) {
+          const userData = await getOrCreateProfile(session.user);
           if (mounted) {
+            setCurrentUser(userData);
+            setIsLoggedIn(true);
             setIsLoading(false);
+            console.log("User signed in:", userData);
           }
         } else if (event === 'SIGNED_OUT') {
-          setCurrentUser(null);
-          setIsLoggedIn(false);
-          setIsLoading(false);
+          if (mounted) {
+            setCurrentUser(null);
+            setIsLoggedIn(false);
+            setIsLoading(false);
+            console.log("User signed out");
+          }
         }
       }
     );
 
-    checkAuth();
+    initializeAuth();
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
   }, [setCurrentUser]);
-
-  // Function to load users
-  const loadUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*');
-      
-      if (error) {
-        console.error('Error loading users:', error);
-        return;
-      }
-      
-      if (data) {
-        const typedUsers = data.map(user => ({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role as UserRole,
-          avatar: user.avatar
-        }));
-        setUsers(typedUsers);
-      }
-    } catch (error) {
-      console.error('Error loading users:', error);
-    }
-  };
-
-  // Load users when the component mounts
-  useEffect(() => {
-    loadUsers();
-  }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -220,18 +183,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (data.session) {
-        console.log("Login successful, session created:", data.session.user.id);
+        console.log("Login successful");
         toast.success('Login realizado com sucesso!');
         return true;
       } else {
         console.error('Login failed: No session returned');
-        toast.error('Falha ao realizar login: Nenhuma sessão retornada');
+        toast.error('Falha ao realizar login');
         return false;
       }
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Erro ao realizar login');
       return false;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Logout error:', error);
+        toast.error('Erro ao realizar logout');
+        return;
+      }
+      
+      setCurrentUser(null);
+      setIsLoggedIn(false);
+      toast.info('Você foi desconectado');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Erro ao realizar logout');
     }
   };
 
@@ -243,7 +224,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         options: {
           data: {
             name,
-            role: 'viewer' // Default role
+            role: 'viewer'
           }
         }
       });
@@ -300,25 +281,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Get pending users error:', error);
       return [];
-    }
-  };
-
-  const logout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Logout error:', error);
-        toast.error('Erro ao realizar logout');
-        return;
-      }
-      
-      localStorage.removeItem('currentUser');
-      setCurrentUser(null);
-      setIsLoggedIn(false);
-      toast.info('Você foi desconectado');
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('Erro ao realizar logout');
     }
   };
 

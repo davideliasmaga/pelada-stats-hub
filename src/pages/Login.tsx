@@ -9,7 +9,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export default function Login() {
-  const [isLoading, setIsLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,7 +19,7 @@ export default function Login() {
   
   // Check if user is already logged in
   useEffect(() => {
-    console.log("Login component mounted, auth state:", { isLoggedIn, authLoading });
+    console.log("Login component: checking auth state", { isLoggedIn, authLoading });
     
     if (authLoading) {
       console.log("Auth is still loading...");
@@ -31,9 +30,6 @@ export default function Login() {
       console.log("User is logged in, redirecting...");
       const from = location.state?.from?.pathname || "/";
       navigate(from, { replace: true });
-    } else {
-      console.log("User is not logged in, showing login form");
-      setIsLoading(false);
     }
   }, [isLoggedIn, authLoading, navigate, location]);
   
@@ -58,8 +54,8 @@ export default function Login() {
   };
   
   // Show loading state while checking auth
-  if (isLoading || authLoading) {
-    console.log("Showing loading state:", { isLoading, authLoading });
+  if (authLoading) {
+    console.log("Showing loading state");
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
@@ -86,7 +82,6 @@ export default function Login() {
           )}
           
           <form onSubmit={handleLogin} className="space-y-6">
-            {/* Email field */}
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">Email</label>
               <div className="relative">
@@ -103,7 +98,6 @@ export default function Login() {
               </div>
             </div>
             
-            {/* Password field */}
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">Senha</label>
               <div className="relative">
@@ -120,7 +114,6 @@ export default function Login() {
               </div>
             </div>
             
-            {/* Login button */}
             <Button 
               type="submit" 
               className="w-full bg-gray-900 hover:bg-gray-800"
@@ -136,7 +129,6 @@ export default function Login() {
               )}
             </Button>
             
-            {/* Helper links */}
             <div className="flex flex-col gap-2">
               <Button 
                 type="button" 

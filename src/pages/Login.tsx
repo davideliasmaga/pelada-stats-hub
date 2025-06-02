@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { LogoWhiteBg } from "@/assets/logo-white-bg";
@@ -9,8 +10,8 @@ import { toast } from "sonner";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(true);
-  const [email, setEmail] = useState("davideliasmagalhaes@gmail.com");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -147,12 +148,6 @@ export default function Login() {
               </Button>
             </div>
           </form>
-        </div>
-        
-        {/* Login help */}
-        <div className="mt-6 text-center text-xs text-gray-500">
-          <p>Usuário padrão: davideliasmagalhaes@gmail.com</p>
-          <p>Senha padrão: admin123456</p>
         </div>
       </div>
     </div>

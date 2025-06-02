@@ -26,9 +26,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [users, setUsers] = useState<User[]>([]);
   const { setCurrentUser } = useUser();
 
-  // Function to fetch user profile
+  // Function to fetch user profile with error handling
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log("Fetching user profile for:", userId);
+      
+      // Try to get profile directly first
       const { data: user, error } = await supabase
         .from('profiles')
         .select('*')
@@ -36,7 +39,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .maybeSingle();
       
       if (error) {
-        console.error("User fetch error:", error);
+        console.error("Profile fetch error:", error);
+        
+        // If error is related to RLS, try to get session user data
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          console.log("Creating profile for new user");
+          // Create a basic profile
+          const newProfile = {
+            id: authUser.id,
+            email: authUser.email || '',
+            name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário',
+            role: 'viewer' as UserRole
+          };
+          
+          try {
+            const { data: createdProfile, error: createError } = await supabase
+              .from('profiles')
+              .insert([newProfile])
+              .select()
+              .single();
+            
+            if (!createError && createdProfile) {
+              return {
+                id: createdProfile.id,
+                name: createdProfile.name,
+                email: createdProfile.email,
+                role: createdProfile.role as UserRole,
+                avatar: createdProfile.avatar
+              };
+            }
+          } catch (createErr) {
+            console.error("Error creating profile:", createErr);
+          }
+          
+          // Return basic user data even if profile creation fails
+          return newProfile;
+        }
         return null;
       }
       
@@ -87,38 +126,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (userData) {
             setCurrentUser(userData);
             setIsLoggedIn(true);
-          } else {
-            console.log("No user profile found, but session exists. Creating profile...");
-            // Create profile if it doesn't exist
-            const { data: newUser, error: createError } = await supabase
-              .from('profiles')
-              .insert([
-                {
-                  id: session.user.id,
-                  email: session.user.email,
-                  name: session.user.email?.split('@')[0] || 'Usuário',
-                  role: 'viewer'
-                }
-              ])
-              .select()
-              .single();
-            
-            if (!mounted) return;
-            
-            if (createError) {
-              console.error("Error creating profile:", createError);
-            } else if (newUser) {
-              const newUserData: User = {
-                id: newUser.id,
-                name: newUser.name,
-                email: newUser.email,
-                role: newUser.role as UserRole,
-                avatar: newUser.avatar
-              };
-              
-              setCurrentUser(newUserData);
-              setIsLoggedIn(true);
-            }
           }
         } else {
           console.log("No active session found");

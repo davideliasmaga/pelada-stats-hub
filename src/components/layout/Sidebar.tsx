@@ -32,7 +32,7 @@ const Sidebar = () => {
       
       <SidebarContent>
         <SidebarMenu>
-          {/* Página inicial - todos os usuários podem ver */}
+          {/* Página inicial - todos os usuários podem ver (admin, mensalista, viewer) */}
           <SidebarMenuItem>
             <SidebarMenuButton asChild className={cn(
               "flex items-center gap-3 px-4 py-2 rounded-full",
@@ -45,7 +45,7 @@ const Sidebar = () => {
             </SidebarMenuButton>
           </SidebarMenuItem>
           
-          {/* Artilharia - todos os usuários podem ver */}
+          {/* Artilharia - todos os usuários podem ver (admin, mensalista, viewer) */}
           <SidebarMenuItem>
             <SidebarMenuButton asChild className={cn(
               "flex items-center gap-3 px-4 py-2 rounded-full",

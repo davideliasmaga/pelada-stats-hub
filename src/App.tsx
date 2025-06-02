@@ -56,7 +56,7 @@ const App = () => (
               <Route path="/create-password" element={<CreatePassword />} />
               <Route path="/register" element={<Register />} />
               
-              {/* Protected routes - Todos os usuários */}
+              {/* Protected routes - Todos os usuários autenticados (admin, mensalista, viewer) */}
               <Route path="/" element={
                 <RequireAuth>
                   <RequireRole allowedRoles={['admin', 'mensalista', 'viewer']}>

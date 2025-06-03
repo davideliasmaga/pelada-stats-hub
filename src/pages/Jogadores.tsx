@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { 
   Card, 
@@ -29,16 +28,18 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Plus, User, Image } from "lucide-react";
-import { getPlayers, createPlayer, deletePlayer } from "@/services/dataService";
+import { createSupabasePlayer, getSupabasePlayers, deleteSupabasePlayer } from "@/services/supabaseDataService";
 import { Player, PlayerPosition, RunningAbility } from "@/types";
 import { useUser } from "@/contexts/UserContext";
 import { Navigate } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
+import { toast } from "sonner";
 
 const Jogadores = () => {
   const { isAdmin } = useUser();
   const [players, setPlayers] = useState<Player[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   // Form state for new player
   const [playerName, setPlayerName] = useState("");
@@ -48,34 +49,54 @@ const Jogadores = () => {
   const [playerPhoto, setPlayerPhoto] = useState<string>("");
   
   useEffect(() => {
-    setPlayers(getPlayers());
+    loadPlayers();
   }, []);
+
+  const loadPlayers = async () => {
+    try {
+      setLoading(true);
+      const data = await getSupabasePlayers();
+      setPlayers(data);
+    } catch (error) {
+      console.error('Error loading players:', error);
+      toast.error('Erro ao carregar jogadores');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Redirect if not admin
   if (!isAdmin) {
     return <Navigate to="/" />;
   }
 
-  const handleAddPlayer = () => {
+  const handleAddPlayer = async () => {
     if (!playerName) return;
 
-    const newPlayer = createPlayer({
-      name: playerName,
-      position: playerPosition,
-      running: playerRunning,
-      rating: playerRating,
-      photo: playerPhoto
-    });
+    try {
+      const newPlayer = await createSupabasePlayer({
+        name: playerName,
+        position: playerPosition,
+        running: playerRunning,
+        rating: playerRating,
+        photo: playerPhoto
+      });
 
-    setPlayers([...players, newPlayer]);
-    
-    // Reset form
-    setPlayerName("");
-    setPlayerPosition("flexivel");
-    setPlayerRunning("medio");
-    setPlayerRating(7.5);
-    setPlayerPhoto("");
-    setDialogOpen(false);
+      setPlayers([...players, newPlayer]);
+      
+      // Reset form
+      setPlayerName("");
+      setPlayerPosition("flexivel");
+      setPlayerRunning("medio");
+      setPlayerRating(7.5);
+      setPlayerPhoto("");
+      setDialogOpen(false);
+      
+      toast.success('Jogador adicionado com sucesso!');
+    } catch (error) {
+      console.error('Error adding player:', error);
+      toast.error('Erro ao adicionar jogador');
+    }
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,9 +110,18 @@ const Jogadores = () => {
     }
   };
 
-  const handleDeletePlayer = (id: string) => {
-    if (deletePlayer(id)) {
-      setPlayers(players.filter(player => player.id !== id));
+  const handleDeletePlayer = async (id: string) => {
+    try {
+      const success = await deleteSupabasePlayer(id);
+      if (success) {
+        setPlayers(players.filter(player => player.id !== id));
+        toast.success('Jogador removido com sucesso!');
+      } else {
+        toast.error('Erro ao remover jogador');
+      }
+    } catch (error) {
+      console.error('Error deleting player:', error);
+      toast.error('Erro ao remover jogador');
     }
   };
 
@@ -245,49 +275,53 @@ const Jogadores = () => {
             <CardTitle>Jogadores Cadastrados</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Foto</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Posição</TableHead>
-                  <TableHead>Corre</TableHead>
-                  <TableHead>Nota</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {players.map((player) => (
-                  <TableRow key={player.id}>
-                    <TableCell>
-                      <Avatar>
-                        {player.photo ? (
-                          <AvatarImage src={player.photo} alt={player.name} />
-                        ) : (
-                          <AvatarFallback>
-                            {getPlayerInitials(player.name)}
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-                    </TableCell>
-                    <TableCell className="font-medium">{player.name}</TableCell>
-                    <TableCell>{getPositionText(player.position)}</TableCell>
-                    <TableCell>{getRunningText(player.running)}</TableCell>
-                    <TableCell>{player.rating.toFixed(1)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-red-500 hover:text-red-700 hover:bg-red-100"
-                        onClick={() => handleDeletePlayer(player.id)}
-                      >
-                        Remover
-                      </Button>
-                    </TableCell>
+            {loading ? (
+              <div className="text-center py-8">Carregando jogadores...</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Foto</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Posição</TableHead>
+                    <TableHead>Corre</TableHead>
+                    <TableHead>Nota</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {players.map((player) => (
+                    <TableRow key={player.id}>
+                      <TableCell>
+                        <Avatar>
+                          {player.photo ? (
+                            <AvatarImage src={player.photo} alt={player.name} />
+                          ) : (
+                            <AvatarFallback>
+                              {getPlayerInitials(player.name)}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                      </TableCell>
+                      <TableCell className="font-medium">{player.name}</TableCell>
+                      <TableCell>{getPositionText(player.position)}</TableCell>
+                      <TableCell>{getRunningText(player.running)}</TableCell>
+                      <TableCell>{player.rating.toFixed(1)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-500 hover:text-red-700 hover:bg-red-100"
+                          onClick={() => handleDeletePlayer(player.id)}
+                        >
+                          Remover
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>

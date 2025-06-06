@@ -14,14 +14,14 @@ export const createSupabasePlayer = async (player: Omit<Player, 'id'>) => {
         position: player.position,
         running: player.running,
         rating: player.rating,
-        photo: player.photo
+        photo: player.photo || null
       }])
       .select()
       .single();
 
     if (error) {
       console.error('Error creating player:', error);
-      throw error;
+      throw new Error(`Erro ao criar jogador: ${error.message}`);
     }
 
     console.log('Player created successfully:', data);
@@ -31,7 +31,7 @@ export const createSupabasePlayer = async (player: Omit<Player, 'id'>) => {
       name: data.name,
       position: data.position as PlayerPosition,
       running: data.running as RunningAbility,
-      rating: data.rating,
+      rating: Number(data.rating),
       photo: data.photo
     } as Player;
   } catch (error) {
@@ -51,17 +51,17 @@ export const getSupabasePlayers = async (): Promise<Player[]> => {
 
     if (error) {
       console.error('Error fetching players:', error);
-      throw error;
+      throw new Error(`Erro ao buscar jogadores: ${error.message}`);
     }
 
     console.log('Players fetched successfully:', data);
 
-    return data.map(player => ({
+    return (data || []).map(player => ({
       id: player.id,
       name: player.name,
       position: player.position as PlayerPosition,
       running: player.running as RunningAbility,
-      rating: player.rating,
+      rating: Number(player.rating),
       photo: player.photo
     }));
   } catch (error) {
@@ -81,7 +81,7 @@ export const deleteSupabasePlayer = async (id: string): Promise<boolean> => {
 
     if (error) {
       console.error('Error deleting player:', error);
-      return false;
+      throw new Error(`Erro ao deletar jogador: ${error.message}`);
     }
 
     console.log('Player deleted successfully');
@@ -102,15 +102,14 @@ export const createSupabaseGame = async (game: Omit<Game, 'id'>, playerIds: stri
       .insert([{
         date: game.date,
         type: game.type,
-        players_present: playerIds,
-        photo: game.photo
+        photo: game.photo || null
       }])
       .select()
       .single();
 
     if (gameError) {
       console.error('Error creating game:', gameError);
-      throw gameError;
+      throw new Error(`Erro ao criar jogo: ${gameError.message}`);
     }
 
     // Adicionar jogadores presentes na tabela game_players
@@ -126,6 +125,7 @@ export const createSupabaseGame = async (game: Omit<Game, 'id'>, playerIds: stri
 
       if (gamePlayersError) {
         console.error('Error adding game players:', gamePlayersError);
+        // Não falhamos completamente se não conseguir adicionar os jogadores
       }
     }
 
@@ -154,12 +154,12 @@ export const getSupabaseGames = async (): Promise<Game[]> => {
 
     if (error) {
       console.error('Error fetching games:', error);
-      throw error;
+      throw new Error(`Erro ao buscar jogos: ${error.message}`);
     }
 
     console.log('Games fetched successfully:', data);
 
-    return data.map(game => ({
+    return (data || []).map(game => ({
       id: game.id,
       date: game.date,
       type: game.type as GameType,
@@ -191,17 +191,17 @@ export const getGamePlayers = async (gameId: string): Promise<Player[]> => {
 
     if (error) {
       console.error('Error fetching game players:', error);
-      throw error;
+      throw new Error(`Erro ao buscar jogadores do jogo: ${error.message}`);
     }
 
     console.log('Game players fetched successfully:', data);
 
-    return data.map(item => ({
+    return (data || []).map(item => ({
       id: (item.players as any).id,
       name: (item.players as any).name,
       position: (item.players as any).position as PlayerPosition,
       running: (item.players as any).running as RunningAbility,
-      rating: (item.players as any).rating,
+      rating: Number((item.players as any).rating),
       photo: (item.players as any).photo
     }));
   } catch (error) {
@@ -228,7 +228,7 @@ export const createSupabaseTransaction = async (transaction: Omit<Transaction, '
 
     if (error) {
       console.error('Error creating transaction:', error);
-      throw error;
+      throw new Error(`Erro ao criar transação: ${error.message}`);
     }
 
     console.log('Transaction created successfully:', data);
@@ -237,7 +237,7 @@ export const createSupabaseTransaction = async (transaction: Omit<Transaction, '
       id: data.id,
       date: data.date,
       type: data.type as TransactionType,
-      amount: data.amount,
+      amount: Number(data.amount),
       description: data.description
     } as Transaction;
   } catch (error) {
@@ -257,16 +257,16 @@ export const getSupabaseTransactions = async (): Promise<Transaction[]> => {
 
     if (error) {
       console.error('Error fetching transactions:', error);
-      throw error;
+      throw new Error(`Erro ao buscar transações: ${error.message}`);
     }
 
     console.log('Transactions fetched successfully:', data);
 
-    return data.map(transaction => ({
+    return (data || []).map(transaction => ({
       id: transaction.id,
       date: transaction.date,
       type: transaction.type as TransactionType,
-      amount: transaction.amount,
+      amount: Number(transaction.amount),
       description: transaction.description
     }));
   } catch (error) {
@@ -286,7 +286,7 @@ export const clearSupabaseTransactions = async (): Promise<boolean> => {
 
     if (error) {
       console.error('Error clearing transactions:', error);
-      return false;
+      throw new Error(`Erro ao limpar transações: ${error.message}`);
     }
 
     console.log('Transactions cleared successfully');
@@ -312,7 +312,7 @@ export const createSupabaseGoal = async (goal: Omit<Goal, 'id'>) => {
 
     if (fetchError) {
       console.error('Error checking existing goal:', fetchError);
-      throw fetchError;
+      throw new Error(`Erro ao verificar gol existente: ${fetchError.message}`);
     }
 
     if (existingGoal) {
@@ -326,7 +326,7 @@ export const createSupabaseGoal = async (goal: Omit<Goal, 'id'>) => {
 
       if (error) {
         console.error('Error updating goal:', error);
-        throw error;
+        throw new Error(`Erro ao atualizar gol: ${error.message}`);
       }
 
       console.log('Goal updated successfully:', data);
@@ -351,7 +351,7 @@ export const createSupabaseGoal = async (goal: Omit<Goal, 'id'>) => {
 
       if (error) {
         console.error('Error creating goal:', error);
-        throw error;
+        throw new Error(`Erro ao criar gol: ${error.message}`);
       }
 
       console.log('Goal created successfully:', data);
@@ -379,12 +379,12 @@ export const getSupabaseGoals = async (): Promise<Goal[]> => {
 
     if (error) {
       console.error('Error fetching goals:', error);
-      throw error;
+      throw new Error(`Erro ao buscar gols: ${error.message}`);
     }
 
     console.log('Goals fetched successfully:', data);
 
-    return data.map(goal => ({
+    return (data || []).map(goal => ({
       id: goal.id,
       gameId: goal.game_id,
       playerId: goal.player_id,

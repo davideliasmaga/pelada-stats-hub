@@ -45,7 +45,8 @@ const AddGameDialog = ({ onGameAdded }: AddGameDialogProps) => {
       setPlayers(playersData);
     } catch (error) {
       console.error('Error loading players:', error);
-      toast.error('Erro ao carregar jogadores');
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao carregar jogadores';
+      toast.error(errorMessage);
     }
   };
 
@@ -65,6 +66,11 @@ const AddGameDialog = ({ onGameAdded }: AddGameDialogProps) => {
 
     try {
       setLoading(true);
+      console.log('Saving game...', {
+        date: gameDate,
+        type: gameType,
+        selectedPlayers
+      });
       
       await createSupabaseGame({
         date: gameDate,
@@ -81,7 +87,8 @@ const AddGameDialog = ({ onGameAdded }: AddGameDialogProps) => {
       setDialogOpen(false);
     } catch (error) {
       console.error('Error saving game:', error);
-      toast.error('Erro ao salvar jogo');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao salvar jogo';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

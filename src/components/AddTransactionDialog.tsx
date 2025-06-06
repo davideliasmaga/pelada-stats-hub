@@ -43,6 +43,12 @@ const AddTransactionDialog = ({ onTransactionAdded }: AddTransactionDialogProps)
 
     try {
       setLoading(true);
+      console.log('Saving transaction...', {
+        date: transactionDate,
+        type: transactionType,
+        amount: amountNumber,
+        description
+      });
       
       await createSupabaseTransaction({
         date: transactionDate,
@@ -62,7 +68,8 @@ const AddTransactionDialog = ({ onTransactionAdded }: AddTransactionDialogProps)
       setDialogOpen(false);
     } catch (error) {
       console.error('Error saving transaction:', error);
-      toast.error('Erro ao salvar transação');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao salvar transação';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

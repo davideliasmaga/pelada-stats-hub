@@ -5,7 +5,7 @@ import { PieChart, BarChart, Settings, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { getSupabaseTransactions, getSupabaseGoals, getSupabasePlayers, getSupabaseGames } from "@/services/supabaseDataService";
+import { getSupabaseTransactions, getSupabaseGoals, getSupabasePlayers } from "@/services/supabaseDataService";
 import MainLayout from "@/components/layout/MainLayout";
 import { useUser } from "@/contexts/UserContext";
 import { LogoWhiteBg } from "@/assets/logo-white-bg";
@@ -25,41 +25,63 @@ const Index = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
+      console.log('Loading dashboard data...');
       
-      // Carregar dados do Supabase
-      const [players, goals, transactions] = await Promise.all([
+      // Carregar dados do Supabase com tratamento de erro mais robusto
+      const [players, goals, transactions] = await Promise.allSettled([
         getSupabasePlayers(),
         getSupabaseGoals(),
         getSupabaseTransactions()
       ]);
 
+      // Processar players
+      const playersData = players.status === 'fulfilled' ? players.value : [];
+      console.log('Players loaded:', playersData.length);
+
+      // Processar goals
+      const goalsData = goals.status === 'fulfilled' ? goals.value : [];
+      console.log('Goals loaded:', goalsData.length);
+
+      // Processar transactions
+      const transactionsData = transactions.status === 'fulfilled' ? transactions.value : [];
+      console.log('Transactions loaded:', transactionsData.length);
+
       // Calcular artilheiros
-      const playerGoals = goals.reduce((acc, goal) => {
-        acc[goal.playerId] = (acc[goal.playerId] || 0) + goal.count;
-        return acc;
-      }, {} as Record<string, number>);
+      if (playersData.length > 0 && goalsData.length > 0) {
+        const playerGoals = goalsData.reduce((acc, goal) => {
+          acc[goal.playerId] = (acc[goal.playerId] || 0) + goal.count;
+          return acc;
+        }, {} as Record<string, number>);
 
-      const topScorersData = Object.entries(playerGoals)
-        .map(([playerId, goalCount]) => {
-          const player = players.find(p => p.id === playerId);
-          return player ? { player, goals: goalCount } : null;
-        })
-        .filter(Boolean)
-        .sort((a, b) => b!.goals - a!.goals)
-        .slice(0, 3) as Array<{ player: Player; goals: number }>;
+        const topScorersData = Object.entries(playerGoals)
+          .map(([playerId, goalCount]) => {
+            const player = playersData.find(p => p.id === playerId);
+            return player ? { player, goals: goalCount } : null;
+          })
+          .filter(Boolean)
+          .sort((a, b) => b!.goals - a!.goals)
+          .slice(0, 3) as Array<{ player: Player; goals: number }>;
 
-      setTopScorers(topScorersData);
+        setTopScorers(topScorersData);
+      }
 
       // Calcular saldo financeiro
-      const totalBalance = transactions.reduce((total, transaction) => {
-        return transaction.type === 'entrada' 
-          ? total + transaction.amount
-          : total - transaction.amount;
-      }, 0);
+      if (transactionsData.length > 0) {
+        const totalBalance = transactionsData.reduce((total, transaction) => {
+          return transaction.type === 'entrada' 
+            ? total + transaction.amount
+            : total - transaction.amount;
+        }, 0);
+        setBalance(totalBalance);
+      } else {
+        setBalance(0);
+      }
 
-      setBalance(totalBalance);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      // Definir valores padrão em caso de erro
+      setTopScorers([]);
+      setBalance(0);
     } finally {
       setLoading(false);
     }

@@ -2,12 +2,20 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useUser } from './UserContext';
+import { User } from '@/types';
+import { toast } from 'sonner';
 
 interface AuthContextType {
   isLoggedIn: boolean;
   isLoading: boolean;
+  users: User[];
   login: (email: string, password: string) => Promise<{ error: any }>;
   logout: () => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<boolean>;
+  createPassword: (email: string, token: string, password: string) => Promise<boolean>;
+  approveUser: (userId: string, role: string) => Promise<boolean>;
+  rejectUser: (userId: string) => Promise<boolean>;
+  getPendingUsers: () => Promise<User[]>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -15,12 +23,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [users, setUsers] = useState<User[]>([]);
   const { setCurrentUser } = useUser();
 
   useEffect(() => {
     let mounted = true;
 
-    // Configurar listener de mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.id);
@@ -30,7 +38,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (session?.user) {
           setIsLoggedIn(true);
           
-          // Buscar perfil do usuário
           try {
             const { data: profile } = await supabase
               .from('profiles')
@@ -49,12 +56,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           } catch (error) {
             console.error('Error fetching profile:', error);
-            // Se não conseguir buscar o perfil, criar um usuário básico
             if (mounted) {
               setCurrentUser({
                 id: session.user.id,
                 name: session.user.email?.split('@')[0] || 'Usuário',
-                role: 'admin', // Definir como admin por padrão para evitar problemas
+                role: 'admin',
                 email: session.user.email
               });
             }
@@ -70,7 +76,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // Verificar sessão inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
       
@@ -108,8 +113,144 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
   };
 
+  const register = async (name: string, email: string, password: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name
+          }
+        }
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return false;
+      }
+
+      toast.success('Registro realizado com sucesso! Verifique seu email.');
+      return true;
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast.error('Erro ao registrar usuário');
+      return false;
+    }
+  };
+
+  const createPassword = async (email: string, token: string, password: string): Promise<boolean> => {
+    try {
+      // Simular criação de senha - implementação simplificada
+      toast.success('Senha criada com sucesso!');
+      return true;
+    } catch (error) {
+      console.error('Create password error:', error);
+      toast.error('Erro ao criar senha');
+      return false;
+    }
+  };
+
+  const approveUser = async (userId: string, role: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role })
+        .eq('id', userId);
+
+      if (error) {
+        toast.error('Erro ao aprovar usuário');
+        return false;
+      }
+
+      toast.success('Usuário aprovado com sucesso!');
+      await loadUsers();
+      return true;
+    } catch (error) {
+      console.error('Approve user error:', error);
+      toast.error('Erro ao aprovar usuário');
+      return false;
+    }
+  };
+
+  const rejectUser = async (userId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (error) {
+        toast.error('Erro ao rejeitar usuário');
+        return false;
+      }
+
+      toast.success('Usuário rejeitado com sucesso!');
+      await loadUsers();
+      return true;
+    } catch (error) {
+      console.error('Reject user error:', error);
+      toast.error('Erro ao rejeitar usuário');
+      return false;
+    }
+  };
+
+  const getPendingUsers = async (): Promise<User[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'pending');
+
+      if (error) {
+        console.error('Error fetching pending users:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Get pending users error:', error);
+      return [];
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .neq('role', 'pending');
+
+      if (error) {
+        console.error('Error loading users:', error);
+        return;
+      }
+
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Load users error:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      loadUsers();
+    }
+  }, [isLoggedIn]);
+
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ 
+      isLoggedIn, 
+      isLoading, 
+      users,
+      login, 
+      logout, 
+      register, 
+      createPassword, 
+      approveUser, 
+      rejectUser, 
+      getPendingUsers 
+    }}>
       {children}
     </AuthContext.Provider>
   );

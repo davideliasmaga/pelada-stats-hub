@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -17,56 +18,13 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import MainLayout from "@/components/layout/MainLayout";
 import { useUser } from "@/contexts/UserContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { UserRole, User } from "@/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Check, Copy, UserPlus, Loader2, AlertCircle } from "lucide-react";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
+import { Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-// Mock users data for this page
-const initialUsers = [
-  { id: "1", name: "Admin User", email: "admin@example.com", role: "admin" as UserRole },
-  { id: "2", name: "Mensalista User", email: "mensalista@example.com", role: "mensalista" as UserRole },
-  { id: "3", name: "Viewer User", email: "viewer@example.com", role: "viewer" as UserRole },
-  { id: "4", name: "John Doe", email: "john@example.com", role: "mensalista" as UserRole },
-  { id: "5", name: "Jane Smith", email: "jane@example.com", role: "viewer" as UserRole },
-];
-
-const getRoleBadge = (role: UserRole) => {
-  switch (role) {
-    case "admin":
-      return <Badge className="bg-gray-900">Admin</Badge>;
-    case "mensalista":
-      return <Badge className="bg-gray-600">Mensalista</Badge>;
-    case "viewer":
-      return <Badge className="bg-gray-400">Viewer</Badge>;
-    default:
-      return <Badge>Unknown</Badge>;
-  }
-};
-
-// Form schema for adding new users
-const newUserSchema = z.object({
-  name: z.string().min(2, {
-    message: "Nome deve ter pelo menos 2 caracteres",
-  }),
-  email: z.string().email({
-    message: "Email inválido",
-  }),
-  role: z.enum(["admin", "mensalista", "viewer"]),
-});
-
-type NewUserFormValues = z.infer<typeof newUserSchema>;
 
 const Admin = () => {
   const { currentUser } = useUser();
@@ -76,7 +34,6 @@ const Admin = () => {
   const [isApproving, setIsApproving] = useState<string | null>(null);
   const [isRejecting, setIsRejecting] = useState<string | null>(null);
 
-  // Redirect if not admin
   if (!currentUser || currentUser.role !== 'admin') {
     return <Navigate to="/" replace />;
   }

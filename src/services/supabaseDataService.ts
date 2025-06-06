@@ -112,6 +112,8 @@ export const createSupabaseGame = async (game: Omit<Game, 'id'>, playerIds: stri
       throw new Error(`Erro ao criar jogo: ${gameError.message}`);
     }
 
+    console.log('Game created successfully:', gameData);
+
     // Adicionar jogadores presentes na tabela game_players
     if (playerIds.length > 0) {
       const gamePlayerRecords = playerIds.map(playerId => ({
@@ -126,10 +128,11 @@ export const createSupabaseGame = async (game: Omit<Game, 'id'>, playerIds: stri
       if (gamePlayersError) {
         console.error('Error adding game players:', gamePlayersError);
         // Não falhamos completamente se não conseguir adicionar os jogadores
+        console.warn('Game created but failed to add players');
+      } else {
+        console.log('Game players added successfully');
       }
     }
-
-    console.log('Game created successfully:', gameData);
 
     return {
       id: gameData.id,

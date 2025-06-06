@@ -1,8 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from './UserContext';
-import { User } from '@/types';
+import { User, UserRole } from '@/types';
 import { toast } from 'sonner';
 
 interface AuthContextType {
@@ -93,28 +92,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       subscription.unsubscribe();
     };
   }, [setCurrentUser]);
-
-  const login = async (email: string, password: string) => {
-    try {
-      console.log('Attempting login for:', email);
-      
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) {
-        console.error('Login error:', error);
-      } else {
-        console.log('Login successful');
-      }
-      
-      return { error };
-    } catch (error) {
-      console.error('Login exception:', error);
-      return { error };
-    }
-  };
 
   const logout = async () => {
     try {
@@ -235,7 +212,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       console.log('Pending users fetched:', data);
-      return data || [];
+      
+      // Convert the data to User type with proper role casting
+      const pendingUsers: User[] = (data || []).map(profile => ({
+        id: profile.id,
+        name: profile.name,
+        email: profile.email || '',
+        role: profile.role as UserRole,
+        avatar: profile.avatar || undefined
+      }));
+
+      return pendingUsers;
     } catch (error) {
       console.error('Get pending users exception:', error);
       return [];
@@ -257,7 +244,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       console.log('Users loaded:', data);
-      setUsers(data || []);
+      
+      // Convert the data to User type with proper role casting
+      const loadedUsers: User[] = (data || []).map(profile => ({
+        id: profile.id,
+        name: profile.name,
+        email: profile.email || '',
+        role: profile.role as UserRole,
+        avatar: profile.avatar || undefined
+      }));
+
+      setUsers(loadedUsers);
     } catch (error) {
       console.error('Load users exception:', error);
     }
@@ -268,6 +265,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       loadUsers();
     }
   }, [isLoggedIn, isLoading]);
+
+  const login = async (email: string, password: string) => {
+    try {
+      console.log('Attempting login for:', email);
+      
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        console.error('Login error:', error);
+      } else {
+        console.log('Login successful');
+      }
+      
+      return { error };
+    } catch (error) {
+      console.error('Login exception:', error);
+      return { error };
+    }
+  };
 
   return (
     <AuthContext.Provider value={{ 

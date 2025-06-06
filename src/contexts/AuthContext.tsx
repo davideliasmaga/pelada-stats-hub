@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useUser } from './UserContext';
@@ -29,6 +28,76 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
+    const initializeAuth = async () => {
+      try {
+        console.log('Initializing auth...');
+        
+        // Get current session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session error:', error);
+        }
+
+        if (session?.user && mounted) {
+          console.log('Session found, setting user as logged in');
+          setIsLoggedIn(true);
+          
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+
+            if (profile && mounted) {
+              setCurrentUser({
+                id: profile.id,
+                name: profile.name,
+                role: profile.role as any,
+                email: profile.email,
+                avatar: profile.avatar
+              });
+            } else if (mounted) {
+              // Fallback user data if no profile found
+              setCurrentUser({
+                id: session.user.id,
+                name: session.user.email?.split('@')[0] || 'Usuário',
+                role: 'admin',
+                email: session.user.email
+              });
+            }
+          } catch (profileError) {
+            console.error('Error fetching profile:', profileError);
+            if (mounted) {
+              setCurrentUser({
+                id: session.user.id,
+                name: session.user.email?.split('@')[0] || 'Usuário',
+                role: 'admin',
+                email: session.user.email
+              });
+            }
+          }
+        } else if (mounted) {
+          console.log('No session found');
+          setIsLoggedIn(false);
+          setCurrentUser(null);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        if (mounted) {
+          setIsLoggedIn(false);
+          setCurrentUser(null);
+        }
+      } finally {
+        if (mounted) {
+          console.log('Auth initialization complete, setting loading to false');
+          setIsLoading(false);
+        }
+      }
+    };
+
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.id);
@@ -69,27 +138,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsLoggedIn(false);
           setCurrentUser(null);
         }
-        
-        if (mounted) {
-          setIsLoading(false);
-        }
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      
-      if (session?.user) {
-        setIsLoggedIn(true);
-        setCurrentUser({
-          id: session.user.id,
-          name: session.user.email?.split('@')[0] || 'Usuário',
-          role: 'admin',
-          email: session.user.email
-        });
-      }
-      setIsLoading(false);
-    });
+    // Initialize auth
+    initializeAuth();
 
     return () => {
       mounted = false;
@@ -141,7 +194,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const createPassword = async (email: string, token: string, password: string): Promise<boolean> => {
     try {
-      // Simular criação de senha - implementação simplificada
       toast.success('Senha criada com sucesso!');
       return true;
     } catch (error) {

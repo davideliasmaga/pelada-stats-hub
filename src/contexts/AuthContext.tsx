@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { useUser } from './UserContext';
 import { User } from '@/types';
 import { toast } from 'sonner';
@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (mounted) {
           if (session?.user) {
-            console.log('User session found');
+            console.log('User session found:', session.user.id);
             setIsLoggedIn(true);
             setCurrentUser({
               id: session.user.id,
@@ -50,15 +50,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setIsLoggedIn(false);
             setCurrentUser(null);
           }
-          
-          console.log('Auth initialization complete - setting loading false');
-          setIsLoading(false);
         }
       } catch (error) {
         console.error('Auth init error:', error);
         if (mounted) {
           setIsLoggedIn(false);
           setCurrentUser(null);
+        }
+      } finally {
+        if (mounted) {
+          console.log('Auth initialization complete - setting loading false');
           setIsLoading(false);
         }
       }
@@ -81,6 +82,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoggedIn(false);
         setCurrentUser(null);
       }
+      
+      setIsLoading(false);
     });
 
     initAuth();
@@ -93,22 +96,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('Attempting login for:', email);
+      
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+      
+      if (error) {
+        console.error('Login error:', error);
+      } else {
+        console.log('Login successful');
+      }
+      
       return { error };
     } catch (error) {
+      console.error('Login exception:', error);
       return { error };
     }
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    try {
+      console.log('Logging out...');
+      await supabase.auth.signOut();
+      console.log('Logout successful');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const register = async (name: string, email: string, password: string): Promise<boolean> => {
     try {
+      console.log('Registering user:', email);
+      
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -120,14 +141,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
+        console.error('Registration error:', error);
         toast.error(error.message);
         return false;
       }
 
+      console.log('Registration successful');
       toast.success('Registro realizado com sucesso! Verifique seu email.');
       return true;
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('Registration exception:', error);
       toast.error('Erro ao registrar usuário');
       return false;
     }
@@ -135,6 +158,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const createPassword = async (email: string, token: string, password: string): Promise<boolean> => {
     try {
+      console.log('Creating password for:', email);
       toast.success('Senha criada com sucesso!');
       return true;
     } catch (error) {
@@ -146,21 +170,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const approveUser = async (userId: string, role: string): Promise<boolean> => {
     try {
+      console.log('Approving user:', userId, 'with role:', role);
+      
       const { error } = await supabase
         .from('profiles')
         .update({ role })
         .eq('id', userId);
 
       if (error) {
+        console.error('Approve user error:', error);
         toast.error('Erro ao aprovar usuário');
         return false;
       }
 
+      console.log('User approved successfully');
       toast.success('Usuário aprovado com sucesso!');
       await loadUsers();
       return true;
     } catch (error) {
-      console.error('Approve user error:', error);
+      console.error('Approve user exception:', error);
       toast.error('Erro ao aprovar usuário');
       return false;
     }
@@ -168,21 +196,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const rejectUser = async (userId: string): Promise<boolean> => {
     try {
+      console.log('Rejecting user:', userId);
+      
       const { error } = await supabase
         .from('profiles')
         .delete()
         .eq('id', userId);
 
       if (error) {
+        console.error('Reject user error:', error);
         toast.error('Erro ao rejeitar usuário');
         return false;
       }
 
+      console.log('User rejected successfully');
       toast.success('Usuário rejeitado com sucesso!');
       await loadUsers();
       return true;
     } catch (error) {
-      console.error('Reject user error:', error);
+      console.error('Reject user exception:', error);
       toast.error('Erro ao rejeitar usuário');
       return false;
     }
@@ -190,6 +222,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const getPendingUsers = async (): Promise<User[]> => {
     try {
+      console.log('Fetching pending users...');
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -200,15 +234,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return [];
       }
 
+      console.log('Pending users fetched:', data);
       return data || [];
     } catch (error) {
-      console.error('Get pending users error:', error);
+      console.error('Get pending users exception:', error);
       return [];
     }
   };
 
   const loadUsers = async () => {
     try {
+      console.log('Loading users...');
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -219,9 +256,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      console.log('Users loaded:', data);
       setUsers(data || []);
     } catch (error) {
-      console.error('Load users error:', error);
+      console.error('Load users exception:', error);
     }
   };
 

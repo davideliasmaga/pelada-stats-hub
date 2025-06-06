@@ -5,37 +5,83 @@ import { PieChart, BarChart, Settings, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { getTopScorers, getTotalBalance } from "@/services/dataService";
+import { getSupabaseTransactions, getSupabaseGoals, getSupabasePlayers, getSupabaseGames } from "@/services/supabaseDataService";
 import MainLayout from "@/components/layout/MainLayout";
 import { useUser } from "@/contexts/UserContext";
 import { LogoWhiteBg } from "@/assets/logo-white-bg";
-import { startOfQuarter, endOfQuarter } from "date-fns";
+import { Player, Goal, Transaction } from "@/types";
 
 const Index = () => {
   const navigate = useNavigate();
   const { isAdmin, isMensalista } = useUser();
-  const [topScorers, setTopScorers] = useState<Array<{ player: any; goals: number }>>([]);
-  const balance = getTotalBalance();
+  const [topScorers, setTopScorers] = useState<Array<{ player: Player; goals: number }>>([]);
+  const [balance, setBalance] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get top scorers for the current quarter
-    const today = new Date();
-    const quarterStart = startOfQuarter(today);
-    const quarterEnd = endOfQuarter(today);
-    
-    const dateRangeObj = {
-      start: quarterStart.toISOString(),
-      end: quarterEnd.toISOString()
-    };
-    
-    setTopScorers(getTopScorers(dateRangeObj).slice(0, 3));
+    loadDashboardData();
   }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Carregar dados do Supabase
+      const [players, goals, transactions] = await Promise.all([
+        getSupabasePlayers(),
+        getSupabaseGoals(),
+        getSupabaseTransactions()
+      ]);
+
+      // Calcular artilheiros
+      const playerGoals = goals.reduce((acc, goal) => {
+        acc[goal.playerId] = (acc[goal.playerId] || 0) + goal.count;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const topScorersData = Object.entries(playerGoals)
+        .map(([playerId, goalCount]) => {
+          const player = players.find(p => p.id === playerId);
+          return player ? { player, goals: goalCount } : null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => b!.goals - a!.goals)
+        .slice(0, 3) as Array<{ player: Player; goals: number }>;
+
+      setTopScorers(topScorersData);
+
+      // Calcular saldo financeiro
+      const totalBalance = transactions.reduce((total, transaction) => {
+        return transaction.type === 'entrada' 
+          ? total + transaction.amount
+          : total - transaction.amount;
+      }, 0);
+
+      setBalance(totalBalance);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getPlayerInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
   
   const topScorer = topScorers.length > 0 ? topScorers[0] : null;
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="container mx-auto flex items-center justify-center py-12">
+          <div className="text-center">
+            <p className="text-xl text-gray-600">Carregando dados...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -57,7 +103,7 @@ const Index = () => {
                 <CardHeader>
                   <CardTitle className="text-white flex items-center gap-2">
                     <Award className="h-5 w-5 text-yellow-400" />
-                    Artilheiro do Trimestre
+                    Artilheiro Geral
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -115,27 +161,33 @@ const Index = () => {
               <CardDescription>Top 3 artilheiros</CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-3">
-                {topScorers.map(({ player, goals }, index) => (
-                  <li key={player.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center">
-                        <Avatar className="h-8 w-8 mr-2">
-                          {player.photo ? (
-                            <AvatarImage src={player.photo} alt={player.name} />
-                          ) : (
-                            <AvatarFallback>
-                              {getPlayerInitials(player.name)}
-                            </AvatarFallback>
-                          )}
-                        </Avatar>
-                        <span>{player.name}</span>
+              {topScorers.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  Nenhum gol registrado ainda.
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {topScorers.map(({ player, goals }, index) => (
+                    <li key={player.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center">
+                          <Avatar className="h-8 w-8 mr-2">
+                            {player.photo ? (
+                              <AvatarImage src={player.photo} alt={player.name} />
+                            ) : (
+                              <AvatarFallback>
+                                {getPlayerInitials(player.name)}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <span>{player.name}</span>
+                        </div>
                       </div>
-                    </div>
-                    <span className="font-bold">{goals} gols</span>
-                  </li>
-                ))}
-              </ul>
+                      <span className="font-bold">{goals} gols</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
             <CardFooter>
               <Button 

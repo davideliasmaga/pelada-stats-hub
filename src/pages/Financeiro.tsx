@@ -1,8 +1,11 @@
 
-import React, { useState } from "react";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
 import { 
   Table,
   TableBody,
@@ -12,288 +15,239 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { CalendarIcon, Plus, Trash2 } from "lucide-react";
-import MainLayout from "@/components/layout/MainLayout";
-import { getTransactions, getTotalBalance, createTransaction, clearTransactions } from "@/services/dataService";
-import { Transaction, TransactionType } from "@/types";
+import { Badge } from "@/components/ui/badge";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { DollarSign, TrendingUp, TrendingDown, Trash2 } from "lucide-react";
+import { getSupabaseTransactions, clearSupabaseTransactions } from "@/services/supabaseDataService";
+import { Transaction } from "@/types";
 import { useUser } from "@/contexts/UserContext";
 import { Navigate } from "react-router-dom";
+import MainLayout from "@/components/layout/MainLayout";
+import AddTransactionDialog from "@/components/AddTransactionDialog";
 import { toast } from "sonner";
 
 const Financeiro = () => {
-  const { isMensalista, isAdmin } = useUser();
-  const [transactions, setTransactions] = useState<Transaction[]>(getTransactions());
-  const [balance, setBalance] = useState<number>(getTotalBalance());
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const { isAdmin, isMensalista } = useUser();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Form state for new transaction
-  const [transactionDate, setTransactionDate] = useState<Date | undefined>(new Date());
-  const [transactionType, setTransactionType] = useState<TransactionType>("entrada");
-  const [transactionAmount, setTransactionAmount] = useState<string>("");
-  const [transactionDescription, setTransactionDescription] = useState<string>("");
-  
-  // Redirect if not a mensalista or admin
-  if (!isMensalista) {
+  useEffect(() => {
+    loadTransactions();
+  }, []);
+
+  const loadTransactions = async () => {
+    try {
+      setLoading(true);
+      const data = await getSupabaseTransactions();
+      setTransactions(data);
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+      toast.error('Erro ao carregar transações');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Redirect if not admin or mensalista
+  if (!isAdmin && !isMensalista) {
     return <Navigate to="/" />;
   }
 
-  const handleSaveTransaction = () => {
-    if (!transactionDate || !transactionAmount || !transactionDescription) return;
-
-    const amount = parseFloat(transactionAmount);
-    if (isNaN(amount) || amount <= 0) return;
-
-    const newTransaction = createTransaction({
-      date: transactionDate.toISOString(),
-      type: transactionType,
-      amount,
-      description: transactionDescription
-    });
-
-    // Update state
-    setTransactions([newTransaction, ...transactions]);
-    setBalance(getTotalBalance());
-    
-    // Reset form
-    setTransactionDate(new Date());
-    setTransactionType("entrada");
-    setTransactionAmount("");
-    setTransactionDescription("");
-    setDialogOpen(false);
-    
-    toast.success("Transação adicionada com sucesso!");
+  const handleTransactionAdded = () => {
+    loadTransactions(); // Reload transactions after a new one is added
   };
-  
-  const handleClearTransactions = () => {
-    clearTransactions();
-    setTransactions([]);
-    setBalance(0);
-    setClearDialogOpen(false);
-    toast.success("Todas as transações foram removidas!");
+
+  const handleClearTransactions = async () => {
+    try {
+      const success = await clearSupabaseTransactions();
+      if (success) {
+        setTransactions([]);
+        toast.success('Todas as transações foram removidas!');
+      } else {
+        toast.error('Erro ao limpar transações');
+      }
+    } catch (error) {
+      console.error('Error clearing transactions:', error);
+      toast.error('Erro ao limpar transações');
+    }
   };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(amount);
+  };
+
+  const getTransactionIcon = (type: string) => {
+    return type === 'entrada' ? 
+      <TrendingUp className="h-4 w-4 text-green-600" /> : 
+      <TrendingDown className="h-4 w-4 text-red-600" />;
+  };
+
+  const getTransactionBadge = (type: string) => {
+    return type === 'entrada' ? 'default' : 'secondary';
+  };
+
+  const getTransactionText = (type: string) => {
+    return type === 'entrada' ? 'Entrada' : 'Saída';
+  };
+
+  const calculateBalance = () => {
+    return transactions.reduce((total, transaction) => {
+      return transaction.type === 'entrada' 
+        ? total + transaction.amount
+        : total - transaction.amount;
+    }, 0);
+  };
+
+  const balance = calculateBalance();
 
   return (
     <MainLayout>
       <div className="container mx-auto space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h1 className="text-3xl font-bold">Financeiro</h1>
-          
+          <h1 className="text-3xl font-bold">Controle Financeiro</h1>
           <div className="flex gap-2">
-            {isAdmin && (
-              <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
-                <DialogTrigger asChild>
+            <AddTransactionDialog onTransactionAdded={handleTransactionAdded} />
+            {isAdmin && transactions.length > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
                   <Button variant="destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Limpar Transações
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Limpar Todas as Transações</DialogTitle>
-                    <DialogDescription>
-                      Esta ação irá remover todas as transações registradas. Esta ação não pode ser desfeita.
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <DialogFooter className="mt-6">
-                    <Button variant="outline" onClick={() => setClearDialogOpen(false)}>
-                      Cancelar
-                    </Button>
-                    <Button 
-                      variant="destructive"
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar Limpeza</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação irá remover todas as transações financeiras. 
+                      Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction 
                       onClick={handleClearTransactions}
+                      className="bg-red-600 hover:bg-red-700"
                     >
-                      Confirmar Exclusão
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
-            
-            {isAdmin && (
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-gray-900 hover:bg-gray-800">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nova Transação
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Adicionar Nova Transação</DialogTitle>
-                  </DialogHeader>
-                  
-                  <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="date">Data</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            id="date"
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left",
-                              !transactionDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {transactionDate ? (
-                              format(transactionDate, "PPP", { locale: ptBR })
-                            ) : (
-                              <span>Selecione uma data</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={transactionDate}
-                            onSelect={setTransactionDate}
-                            initialFocus
-                            className="pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="type">Tipo</Label>
-                      <Select 
-                        value={transactionType} 
-                        onValueChange={(value) => setTransactionType(value as TransactionType)}
-                      >
-                        <SelectTrigger id="type">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem value="entrada">Entrada</SelectItem>
-                            <SelectItem value="saida">Saída</SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="amount">Valor (R$)</Label>
-                      <Input
-                        id="amount"
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        value={transactionAmount}
-                        onChange={(e) => setTransactionAmount(e.target.value)}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Descrição</Label>
-                      <Input
-                        id="description"
-                        value={transactionDescription}
-                        onChange={(e) => setTransactionDescription(e.target.value)}
-                        placeholder="Descrição da transação"
-                      />
-                    </div>
-                  </div>
-                  
-                  <DialogFooter>
-                    <Button
-                      onClick={handleSaveTransaction}
-                      className="bg-gray-900 hover:bg-gray-800"
-                      disabled={
-                        !transactionDate || 
-                        !transactionAmount || 
-                        !transactionDescription || 
-                        parseFloat(transactionAmount) <= 0
-                      }
-                    >
-                      Salvar Transação
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                      Limpar Todas
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </div>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="col-span-1 md:col-span-3">
-            <CardHeader>
-              <CardTitle>Saldo Atual</CardTitle>
+          <Card>
+            <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Saldo Total</CardTitle>
+              <DollarSign className="h-4 w-4 ml-auto" />
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center justify-center py-8">
-                <h2 className={`text-5xl font-bold ${balance >= 0 ? 'text-gray-900' : 'text-red-500'}`}>
-                  R$ {balance.toFixed(2)}
-                </h2>
-                <p className="text-muted-foreground mt-2">
-                  {balance >= 0 ? 'Saldo Positivo' : 'Saldo Negativo'}
-                </p>
+              <div className={`text-2xl font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency(balance)}
               </div>
             </CardContent>
           </Card>
-          
-          <Card className="col-span-1 md:col-span-3">
-            <CardHeader>
-              <CardTitle>Histórico de Transações</CardTitle>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Entradas</CardTitle>
+              <TrendingUp className="h-4 w-4 ml-auto text-green-600" />
             </CardHeader>
             <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {formatCurrency(
+                  transactions
+                    .filter(t => t.type === 'entrada')
+                    .reduce((sum, t) => sum + t.amount, 0)
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Saídas</CardTitle>
+              <TrendingDown className="h-4 w-4 ml-auto text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                {formatCurrency(
+                  transactions
+                    .filter(t => t.type === 'saida')
+                    .reduce((sum, t) => sum + t.amount, 0)
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Histórico de Transações</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8">Carregando transações...</div>
+            ) : transactions.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                Nenhuma transação registrada ainda.
+              </div>
+            ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data</TableHead>
-                    <TableHead>Descrição</TableHead>
                     <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Valor (R$)</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                        Nenhuma transação registrada
+                  {transactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell>{formatDate(transaction.date)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getTransactionIcon(transaction.type)}
+                          <Badge variant={getTransactionBadge(transaction.type)}>
+                            {getTransactionText(transaction.type)}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>{transaction.description}</TableCell>
+                      <TableCell className={`text-right font-bold ${
+                        transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {transaction.type === 'entrada' ? '+' : '-'}{formatCurrency(transaction.amount)}
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    transactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell>
-                          {format(parseISO(transaction.date), "dd/MM/yyyy", { locale: ptBR })}
-                        </TableCell>
-                        <TableCell>{transaction.description}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            transaction.type === 'entrada' 
-                              ? 'bg-gray-200 text-gray-900' 
-                              : 'bg-red-100 text-red-500'
-                          }`}>
-                            {transaction.type === 'entrada' ? 'Entrada' : 'Saída'}
-                          </span>
-                        </TableCell>
-                        <TableCell className={`text-right font-medium ${
-                          transaction.type === 'entrada' ? 'text-gray-900' : 'text-red-500'
-                        }`}>
-                          {transaction.type === 'entrada' ? '+' : '-'} 
-                          {transaction.amount.toFixed(2)}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
+                  ))}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   );

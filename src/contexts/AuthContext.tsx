@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useUser } from './UserContext';
@@ -28,121 +29,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    const initializeAuth = async () => {
+    const initAuth = async () => {
       try {
-        console.log('Initializing auth...');
+        console.log('Starting auth initialization...');
         
-        // Get current session
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (error) {
-          console.error('Session error:', error);
-        }
-
-        if (session?.user && mounted) {
-          console.log('Session found, setting user as logged in');
-          setIsLoggedIn(true);
-          
-          try {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-
-            if (profile && mounted) {
-              setCurrentUser({
-                id: profile.id,
-                name: profile.name,
-                role: profile.role as any,
-                email: profile.email,
-                avatar: profile.avatar
-              });
-            } else if (mounted) {
-              // Fallback user data if no profile found
-              setCurrentUser({
-                id: session.user.id,
-                name: session.user.email?.split('@')[0] || 'Usuário',
-                role: 'admin',
-                email: session.user.email
-              });
-            }
-          } catch (profileError) {
-            console.error('Error fetching profile:', profileError);
-            if (mounted) {
-              setCurrentUser({
-                id: session.user.id,
-                name: session.user.email?.split('@')[0] || 'Usuário',
-                role: 'admin',
-                email: session.user.email
-              });
-            }
+        if (mounted) {
+          if (session?.user) {
+            console.log('User session found');
+            setIsLoggedIn(true);
+            setCurrentUser({
+              id: session.user.id,
+              name: session.user.email?.split('@')[0] || 'Usuário',
+              role: 'admin',
+              email: session.user.email
+            });
+          } else {
+            console.log('No user session');
+            setIsLoggedIn(false);
+            setCurrentUser(null);
           }
-        } else if (mounted) {
-          console.log('No session found');
-          setIsLoggedIn(false);
-          setCurrentUser(null);
+          
+          console.log('Auth initialization complete - setting loading false');
+          setIsLoading(false);
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error('Auth init error:', error);
         if (mounted) {
           setIsLoggedIn(false);
           setCurrentUser(null);
-        }
-      } finally {
-        if (mounted) {
-          console.log('Auth initialization complete, setting loading to false');
           setIsLoading(false);
         }
       }
     };
 
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.id);
-        
-        if (!mounted) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event);
+      
+      if (!mounted) return;
 
-        if (session?.user) {
-          setIsLoggedIn(true);
-          
-          try {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-
-            if (profile && mounted) {
-              setCurrentUser({
-                id: profile.id,
-                name: profile.name,
-                role: profile.role as any,
-                email: profile.email,
-                avatar: profile.avatar
-              });
-            }
-          } catch (error) {
-            console.error('Error fetching profile:', error);
-            if (mounted) {
-              setCurrentUser({
-                id: session.user.id,
-                name: session.user.email?.split('@')[0] || 'Usuário',
-                role: 'admin',
-                email: session.user.email
-              });
-            }
-          }
-        } else {
-          setIsLoggedIn(false);
-          setCurrentUser(null);
-        }
+      if (session?.user) {
+        setIsLoggedIn(true);
+        setCurrentUser({
+          id: session.user.id,
+          name: session.user.email?.split('@')[0] || 'Usuário',
+          role: 'admin',
+          email: session.user.email
+        });
+      } else {
+        setIsLoggedIn(false);
+        setCurrentUser(null);
       }
-    );
+    });
 
-    // Initialize auth
-    initializeAuth();
+    initAuth();
 
     return () => {
       mounted = false;
@@ -285,10 +226,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    if (isLoggedIn) {
+    if (isLoggedIn && !isLoading) {
       loadUsers();
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, isLoading]);
 
   return (
     <AuthContext.Provider value={{ 

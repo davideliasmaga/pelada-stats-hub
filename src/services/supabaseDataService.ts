@@ -127,7 +127,6 @@ export const createSupabaseGame = async (game: Omit<Game, 'id'>, playerIds: stri
 
       if (gamePlayersError) {
         console.error('Error adding game players:', gamePlayersError);
-        // Não falhamos completamente se não conseguir adicionar os jogadores
         console.warn('Game created but failed to add players');
       } else {
         console.log('Game players added successfully');
@@ -217,20 +216,42 @@ export const getGamePlayers = async (gameId: string): Promise<Player[]> => {
 export const createSupabaseTransaction = async (transaction: Omit<Transaction, 'id'>) => {
   try {
     console.log('Creating transaction:', transaction);
+    console.log('Current auth user:', await supabase.auth.getUser());
+    
+    // Verificar se o usuário está autenticado
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      console.error('Authentication error:', authError);
+      throw new Error('Usuário não autenticado. Faça login novamente.');
+    }
+    
+    console.log('User is authenticated:', user.id);
+    
+    // Preparar dados da transação
+    const transactionData = {
+      date: transaction.date,
+      type: transaction.type,
+      amount: Number(transaction.amount),
+      description: transaction.description.trim()
+    };
+    
+    console.log('Transaction data to insert:', transactionData);
     
     const { data, error } = await supabase
       .from('transactions')
-      .insert([{
-        date: transaction.date,
-        type: transaction.type,
-        amount: transaction.amount,
-        description: transaction.description
-      }])
+      .insert([transactionData])
       .select()
       .single();
 
     if (error) {
       console.error('Error creating transaction:', error);
+      console.error('Error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
       throw new Error(`Erro ao criar transação: ${error.message}`);
     }
 

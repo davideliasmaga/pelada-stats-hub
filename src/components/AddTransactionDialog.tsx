@@ -30,8 +30,21 @@ const AddTransactionDialog = ({ onTransactionAdded }: AddTransactionDialogProps)
   const [loading, setLoading] = useState(false);
 
   const handleSaveTransaction = async () => {
-    if (!transactionDate || !amount || !description) {
-      toast.error('Preencha todos os campos obrigatórios');
+    console.log('Starting to save transaction...');
+    
+    // Validações básicas
+    if (!transactionDate) {
+      toast.error('Data é obrigatória');
+      return;
+    }
+    
+    if (!amount) {
+      toast.error('Valor é obrigatório');
+      return;
+    }
+    
+    if (!description.trim()) {
+      toast.error('Descrição é obrigatória');
       return;
     }
 
@@ -43,21 +56,22 @@ const AddTransactionDialog = ({ onTransactionAdded }: AddTransactionDialogProps)
 
     try {
       setLoading(true);
-      console.log('Saving transaction...', {
+      
+      const transactionData = {
         date: transactionDate,
         type: transactionType,
         amount: amountNumber,
-        description
-      });
+        description: description.trim()
+      };
       
-      await createSupabaseTransaction({
-        date: transactionDate,
-        type: transactionType,
-        amount: amountNumber,
-        description
-      });
+      console.log('Saving transaction with data:', transactionData);
       
+      const result = await createSupabaseTransaction(transactionData);
+      
+      console.log('Transaction saved successfully:', result);
       toast.success('Transação salva com sucesso!');
+      
+      // Callback para recarregar a lista
       onTransactionAdded();
       
       // Reset form
@@ -90,17 +104,18 @@ const AddTransactionDialog = ({ onTransactionAdded }: AddTransactionDialogProps)
         
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="date">Data</Label>
+            <Label htmlFor="date">Data *</Label>
             <Input
               id="date"
               type="date"
               value={transactionDate}
               onChange={(e) => setTransactionDate(e.target.value)}
+              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="type">Tipo</Label>
+            <Label htmlFor="type">Tipo *</Label>
             <Select value={transactionType} onValueChange={(value) => setTransactionType(value as TransactionType)}>
               <SelectTrigger id="type">
                 <SelectValue placeholder="Selecione o tipo" />
@@ -113,25 +128,27 @@ const AddTransactionDialog = ({ onTransactionAdded }: AddTransactionDialogProps)
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="amount">Valor (R$)</Label>
+            <Label htmlFor="amount">Valor (R$) *</Label>
             <Input
               id="amount"
               type="number"
               step="0.01"
-              min="0"
+              min="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
+              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
+            <Label htmlFor="description">Descrição *</Label>
             <Input
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Descrição da transação"
+              required
             />
           </div>
         </div>
@@ -140,7 +157,7 @@ const AddTransactionDialog = ({ onTransactionAdded }: AddTransactionDialogProps)
           <Button
             onClick={handleSaveTransaction}
             className="bg-gray-900 hover:bg-gray-800"
-            disabled={!transactionDate || !amount || !description || loading}
+            disabled={!transactionDate || !amount || !description.trim() || loading}
           >
             {loading ? 'Salvando...' : 'Salvar Transação'}
           </Button>

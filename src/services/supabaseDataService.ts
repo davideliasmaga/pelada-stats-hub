@@ -23,20 +23,6 @@ export const createSupabaseTransaction = async (transaction: Omit<Transaction, '
     
     console.log('User authenticated:', session.user.id);
     
-    // Verificar conexão com o banco
-    console.log('Testing database connection...');
-    const { data: testData, error: testError } = await supabase
-      .from('transactions')
-      .select('count(*)')
-      .limit(1);
-    
-    console.log('Database test result:', { testData, testError });
-    
-    if (testError) {
-      console.error('Database connection error:', testError);
-      throw new Error(`Erro de conexão com banco: ${testError.message}`);
-    }
-    
     // Preparar dados da transação
     const transactionToInsert = {
       date: transaction.date,

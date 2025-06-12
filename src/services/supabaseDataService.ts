@@ -1,6 +1,151 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Player, Game, Goal, Transaction, PlayerPosition, RunningAbility, GameType, TransactionType } from '@/types';
+
+// Transaction Service
+export const createSupabaseTransaction = async (transaction: Omit<Transaction, 'id'>) => {
+  try {
+    console.log('=== STARTING TRANSACTION CREATION ===');
+    console.log('Transaction data received:', transaction);
+    
+    // Verificar se o usuário está autenticado
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    console.log('Session check:', { session: !!session, sessionError });
+    
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      throw new Error(`Erro de sessão: ${sessionError.message}`);
+    }
+    
+    if (!session) {
+      console.error('No active session found');
+      throw new Error('Usuário não autenticado');
+    }
+    
+    console.log('User authenticated:', session.user.id);
+    
+    // Verificar conexão com o banco
+    console.log('Testing database connection...');
+    const { data: testData, error: testError } = await supabase
+      .from('transactions')
+      .select('count(*)')
+      .limit(1);
+    
+    console.log('Database test result:', { testData, testError });
+    
+    if (testError) {
+      console.error('Database connection error:', testError);
+      throw new Error(`Erro de conexão com banco: ${testError.message}`);
+    }
+    
+    // Preparar dados da transação
+    const transactionToInsert = {
+      date: transaction.date,
+      type: transaction.type,
+      amount: Number(transaction.amount),
+      description: transaction.description.trim()
+    };
+    
+    console.log('Data to insert:', transactionToInsert);
+    
+    // Inserir transação
+    console.log('Inserting transaction...');
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert([transactionToInsert])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Insert error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+      throw new Error(`Erro ao criar transação: ${error.message}`);
+    }
+
+    console.log('Transaction created successfully:', data);
+
+    return {
+      id: data.id,
+      date: data.date,
+      type: data.type as TransactionType,
+      amount: Number(data.amount),
+      description: data.description
+    } as Transaction;
+  } catch (error) {
+    console.error('=== ERROR IN createSupabaseTransaction ===');
+    console.error('Error details:', error);
+    throw error;
+  }
+};
+
+export const getSupabaseTransactions = async (): Promise<Transaction[]> => {
+  try {
+    console.log('=== FETCHING TRANSACTIONS ===');
+    
+    // Verificar autenticação
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log('Session for fetch:', !!session);
+    
+    if (!session) {
+      console.warn('No session for fetching transactions');
+      return [];
+    }
+    
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching transactions:', error);
+      throw new Error(`Erro ao buscar transações: ${error.message}`);
+    }
+
+    console.log('Transactions fetched successfully:', data?.length || 0);
+
+    return (data || []).map(transaction => ({
+      id: transaction.id,
+      date: transaction.date,
+      type: transaction.type as TransactionType,
+      amount: Number(transaction.amount),
+      description: transaction.description
+    }));
+  } catch (error) {
+    console.error('Error in getSupabaseTransactions:', error);
+    throw error;
+  }
+};
+
+export const clearSupabaseTransactions = async (): Promise<boolean> => {
+  try {
+    console.log('=== CLEARING TRANSACTIONS ===');
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.error('No session for clearing transactions');
+      return false;
+    }
+    
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+
+    if (error) {
+      console.error('Error clearing transactions:', error);
+      throw new Error(`Erro ao limpar transações: ${error.message}`);
+    }
+
+    console.log('Transactions cleared successfully');
+    return true;
+  } catch (error) {
+    console.error('Error in clearSupabaseTransactions:', error);
+    return false;
+  }
+};
 
 // Player Service
 export const createSupabasePlayer = async (player: Omit<Player, 'id'>) => {
@@ -114,7 +259,6 @@ export const createSupabaseGame = async (game: Omit<Game, 'id'>, playerIds: stri
 
     console.log('Game created successfully:', gameData);
 
-    // Adicionar jogadores presentes na tabela game_players
     if (playerIds.length > 0) {
       const gamePlayerRecords = playerIds.map(playerId => ({
         game_id: gameData.id,
@@ -212,99 +356,11 @@ export const getGamePlayers = async (gameId: string): Promise<Player[]> => {
   }
 };
 
-// Transaction Service
-export const createSupabaseTransaction = async (transaction: Omit<Transaction, 'id'>) => {
-  try {
-    console.log('Creating transaction:', transaction);
-    
-    const { data, error } = await supabase
-      .from('transactions')
-      .insert([{
-        date: transaction.date,
-        type: transaction.type,
-        amount: Number(transaction.amount),
-        description: transaction.description.trim()
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating transaction:', error);
-      throw new Error(`Erro ao criar transação: ${error.message}`);
-    }
-
-    console.log('Transaction created successfully:', data);
-
-    return {
-      id: data.id,
-      date: data.date,
-      type: data.type as TransactionType,
-      amount: Number(data.amount),
-      description: data.description
-    } as Transaction;
-  } catch (error) {
-    console.error('Error in createSupabaseTransaction:', error);
-    throw error;
-  }
-};
-
-export const getSupabaseTransactions = async (): Promise<Transaction[]> => {
-  try {
-    console.log('Fetching transactions...');
-    
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('*')
-      .order('date', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching transactions:', error);
-      throw new Error(`Erro ao buscar transações: ${error.message}`);
-    }
-
-    console.log('Transactions fetched successfully:', data);
-
-    return (data || []).map(transaction => ({
-      id: transaction.id,
-      date: transaction.date,
-      type: transaction.type as TransactionType,
-      amount: Number(transaction.amount),
-      description: transaction.description
-    }));
-  } catch (error) {
-    console.error('Error in getSupabaseTransactions:', error);
-    throw error;
-  }
-};
-
-export const clearSupabaseTransactions = async (): Promise<boolean> => {
-  try {
-    console.log('Clearing all transactions...');
-    
-    const { error } = await supabase
-      .from('transactions')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
-
-    if (error) {
-      console.error('Error clearing transactions:', error);
-      throw new Error(`Erro ao limpar transações: ${error.message}`);
-    }
-
-    console.log('Transactions cleared successfully');
-    return true;
-  } catch (error) {
-    console.error('Error in clearSupabaseTransactions:', error);
-    return false;
-  }
-};
-
 // Goal Service
 export const createSupabaseGoal = async (goal: Omit<Goal, 'id'>) => {
   try {
     console.log('Creating goal:', goal);
     
-    // Verificar se já existe um gol para este jogador neste jogo
     const { data: existingGoal, error: fetchError } = await supabase
       .from('goals')
       .select('*')
@@ -318,7 +374,6 @@ export const createSupabaseGoal = async (goal: Omit<Goal, 'id'>) => {
     }
 
     if (existingGoal) {
-      // Atualizar o gol existente
       const { data, error } = await supabase
         .from('goals')
         .update({ count: existingGoal.count + goal.count })
@@ -340,7 +395,6 @@ export const createSupabaseGoal = async (goal: Omit<Goal, 'id'>) => {
         count: data.count
       } as Goal;
     } else {
-      // Criar novo gol
       const { data, error } = await supabase
         .from('goals')
         .insert([{

@@ -16,6 +16,7 @@ import { Plus } from "lucide-react";
 import { createSupabaseTransaction } from "@/services/supabaseDataService";
 import { TransactionType } from "@/types";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AddTransactionDialogProps {
   onTransactionAdded: () => void;
@@ -30,33 +31,51 @@ const AddTransactionDialog = ({ onTransactionAdded }: AddTransactionDialogProps)
   const [loading, setLoading] = useState(false);
 
   const handleSaveTransaction = async () => {
-    console.log('Starting to save transaction...');
+    console.log('=== STARTING TRANSACTION SAVE ===');
     
-    // Validações básicas
-    if (!transactionDate) {
-      toast.error('Data é obrigatória');
-      return;
-    }
-    
-    if (!amount) {
-      toast.error('Valor é obrigatório');
-      return;
-    }
-    
-    if (!description.trim()) {
-      toast.error('Descrição é obrigatória');
-      return;
-    }
-
-    const amountNumber = parseFloat(amount);
-    if (isNaN(amountNumber) || amountNumber <= 0) {
-      toast.error('Valor deve ser um número válido maior que zero');
-      return;
-    }
-
     try {
       setLoading(true);
       
+      // Verificar se usuário está logado ANTES de validar dados
+      console.log('Checking authentication...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        toast.error('Erro de autenticação');
+        return;
+      }
+      
+      if (!session) {
+        console.error('No active session');
+        toast.error('Você precisa estar logado para criar transações');
+        return;
+      }
+      
+      console.log('User is authenticated:', session.user.id);
+      
+      // Validações básicas
+      if (!transactionDate) {
+        toast.error('Data é obrigatória');
+        return;
+      }
+      
+      if (!amount) {
+        toast.error('Valor é obrigatório');
+        return;
+      }
+      
+      if (!description.trim()) {
+        toast.error('Descrição é obrigatória');
+        return;
+      }
+
+      const amountNumber = parseFloat(amount);
+      if (isNaN(amountNumber) || amountNumber <= 0) {
+        toast.error('Valor deve ser um número válido maior que zero');
+        return;
+      }
+
       const transactionData = {
         date: transactionDate,
         type: transactionType,
@@ -64,7 +83,7 @@ const AddTransactionDialog = ({ onTransactionAdded }: AddTransactionDialogProps)
         description: description.trim()
       };
       
-      console.log('Saving transaction with data:', transactionData);
+      console.log('Attempting to save transaction:', transactionData);
       
       const result = await createSupabaseTransaction(transactionData);
       
@@ -81,7 +100,8 @@ const AddTransactionDialog = ({ onTransactionAdded }: AddTransactionDialogProps)
       setDescription('');
       setDialogOpen(false);
     } catch (error) {
-      console.error('Error saving transaction:', error);
+      console.error('=== ERROR SAVING TRANSACTION ===');
+      console.error('Error details:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao salvar transação';
       toast.error(errorMessage);
     } finally {

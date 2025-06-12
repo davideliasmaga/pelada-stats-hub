@@ -216,42 +216,20 @@ export const getGamePlayers = async (gameId: string): Promise<Player[]> => {
 export const createSupabaseTransaction = async (transaction: Omit<Transaction, 'id'>) => {
   try {
     console.log('Creating transaction:', transaction);
-    console.log('Current auth user:', await supabase.auth.getUser());
-    
-    // Verificar se o usuário está autenticado
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      console.error('Authentication error:', authError);
-      throw new Error('Usuário não autenticado. Faça login novamente.');
-    }
-    
-    console.log('User is authenticated:', user.id);
-    
-    // Preparar dados da transação
-    const transactionData = {
-      date: transaction.date,
-      type: transaction.type,
-      amount: Number(transaction.amount),
-      description: transaction.description.trim()
-    };
-    
-    console.log('Transaction data to insert:', transactionData);
     
     const { data, error } = await supabase
       .from('transactions')
-      .insert([transactionData])
+      .insert([{
+        date: transaction.date,
+        type: transaction.type,
+        amount: Number(transaction.amount),
+        description: transaction.description.trim()
+      }])
       .select()
       .single();
 
     if (error) {
       console.error('Error creating transaction:', error);
-      console.error('Error details:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      });
       throw new Error(`Erro ao criar transação: ${error.message}`);
     }
 

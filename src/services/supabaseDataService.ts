@@ -400,3 +400,48 @@ export const getSupabaseGoals = async (): Promise<Goal[]> => {
     throw error;
   }
 };
+
+// Delete functions
+export const deleteSupabaseGame = async (id: string): Promise<boolean> => {
+  try {
+    console.log('Deleting game:', id);
+    
+    const { error } = await supabase
+      .from('games')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting game:', error);
+      throw new Error(`Erro ao deletar jogo: ${error.message}`);
+    }
+
+    console.log('Game deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error in deleteSupabaseGame:', error);
+    return false;
+  }
+};
+
+export const deleteSupabaseTransaction = async (id: string): Promise<boolean> => {
+  try {
+    console.log('Deleting transaction:', id);
+    
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting transaction:', error);
+      throw new Error(`Erro ao deletar transação: ${error.message}`);
+    }
+
+    console.log('Transaction deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error in deleteSupabaseTransaction:', error);
+    return false;
+  }
+};

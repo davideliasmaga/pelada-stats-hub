@@ -28,7 +28,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { DollarSign, TrendingUp, TrendingDown, Trash2 } from "lucide-react";
-import { getSupabaseTransactions, clearSupabaseTransactions } from "@/services/supabaseDataService";
+import { getSupabaseTransactions, clearSupabaseTransactions, deleteSupabaseTransaction } from "@/services/supabaseDataService";
 import { Transaction } from "@/types";
 import { useUser } from "@/contexts/UserContext";
 import { Navigate } from "react-router-dom";
@@ -79,6 +79,21 @@ const Financeiro = () => {
     } catch (error) {
       console.error('Error clearing transactions:', error);
       toast.error('Erro ao limpar transações');
+    }
+  };
+
+  const handleDeleteTransaction = async (transactionId: string) => {
+    try {
+      const success = await deleteSupabaseTransaction(transactionId);
+      if (success) {
+        setTransactions(transactions.filter(t => t.id !== transactionId));
+        toast.success('Transação deletada com sucesso!');
+      } else {
+        toast.error('Erro ao deletar transação');
+      }
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      toast.error('Erro ao deletar transação');
     }
   };
 
@@ -221,6 +236,7 @@ const Financeiro = () => {
                     <TableHead>Tipo</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -240,6 +256,32 @@ const Financeiro = () => {
                         transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'
                       }`}>
                         {transaction.type === 'entrada' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                      </TableCell>
+                      <TableCell>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja deletar esta transação? Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeleteTransaction(transaction.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Deletar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </TableCell>
                     </TableRow>
                   ))}

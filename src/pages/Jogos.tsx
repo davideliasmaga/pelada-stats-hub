@@ -15,8 +15,20 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users } from "lucide-react";
-import { getSupabaseGames } from "@/services/supabaseDataService";
+import { Button } from "@/components/ui/button";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Calendar, Users, Trash2 } from "lucide-react";
+import { getSupabaseGames, deleteSupabaseGame } from "@/services/supabaseDataService";
 import { Game } from "@/types";
 import { useUser } from "@/contexts/UserContext";
 import { Navigate } from "react-router-dom";
@@ -53,6 +65,21 @@ const Jogos = () => {
 
   const handleGameAdded = () => {
     loadGames(); // Reload games after a new one is added
+  };
+
+  const handleDeleteGame = async (gameId: string) => {
+    try {
+      const success = await deleteSupabaseGame(gameId);
+      if (success) {
+        setGames(games.filter(game => game.id !== gameId));
+        toast.success('Jogo deletado com sucesso!');
+      } else {
+        toast.error('Erro ao deletar jogo');
+      }
+    } catch (error) {
+      console.error('Error deleting game:', error);
+      toast.error('Erro ao deletar jogo');
+    }
   };
 
   const formatGameDate = (dateString: string) => {
@@ -94,6 +121,7 @@ const Jogos = () => {
                     <TableHead><Calendar className="inline mr-2 h-4 w-4" />Data</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead><Users className="inline mr-2 h-4 w-4" />Jogadores</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -111,6 +139,32 @@ const Jogos = () => {
                         <Badge variant="outline">
                           Ver jogadores
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja deletar este jogo? Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeleteGame(game.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Deletar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </TableCell>
                     </TableRow>
                   ))}

@@ -47,7 +47,13 @@ export const approveAccountRequest = async (
   role: 'admin' | 'mensalista' | 'viewer'
 ): Promise<boolean> => {
   try {
-    // Get the request first to get user email
+    // Get current user (admin)
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) {
+      throw new Error('Usuário não autenticado');
+    }
+
+    // Get the request
     const { data: request, error: fetchError } = await supabase
       .from('account_requests')
       .select('*')
@@ -58,28 +64,12 @@ export const approveAccountRequest = async (
       throw new Error('Solicitação não encontrada');
     }
 
-    // Create user via sign up (this will send email confirmation)
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: request.email,
-      password: Math.random().toString(36).slice(-8), // Temporary password
-      options: {
-        data: {
-          name: request.name,
-          role: role
-        }
-      }
-    });
-
-    if (authError) {
-      throw new Error(`Erro ao criar usuário: ${authError.message}`);
-    }
-
-    // Update request status
+    // Update request status to approved
     const { error: updateError } = await supabase
       .from('account_requests')
       .update({
         status: 'approved',
-        approved_by: (await supabase.auth.getUser()).data.user?.id,
+        approved_by: currentUser.id,
         approved_at: new Date().toISOString(),
         role: role
       })
@@ -89,6 +79,9 @@ export const approveAccountRequest = async (
       throw new Error(`Erro ao atualizar solicitação: ${updateError.message}`);
     }
 
+    // Note: The user will be created when they first sign in with their email
+    // The trigger will automatically create their profile with the approved role
+    
     return true;
   } catch (error) {
     console.error('Error approving account request:', error);

@@ -37,26 +37,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (mounted) {
           if (session?.user) {
             console.log('User session found:', session.user.id);
+            setIsLoggedIn(true);
             
-            // Get user profile with role from database
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-            
-            if (profile) {
-              setIsLoggedIn(true);
+            // Try to get profile, but don't fail if it doesn't exist
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+              
               setCurrentUser({
                 id: session.user.id,
-                name: profile.name || session.user.email?.split('@')[0] || 'Usuário',
-                role: profile.role as UserRole,
+                name: profile?.name || session.user.email?.split('@')[0] || 'Usuário',
+                role: (profile?.role as UserRole) || 'viewer',
                 email: session.user.email
               });
-            } else {
-              console.log('No profile found for user');
-              setIsLoggedIn(false);
-              setCurrentUser(null);
+            } catch (profileError) {
+              console.log('Profile not found, using default');
+              setCurrentUser({
+                id: session.user.id,
+                name: session.user.email?.split('@')[0] || 'Usuário',
+                role: 'viewer',
+                email: session.user.email
+              });
             }
           } else {
             console.log('No user session');
@@ -84,24 +88,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!mounted) return;
 
       if (session?.user) {
-        // Get user profile with role from database
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+        setIsLoggedIn(true);
         
-        if (profile) {
-          setIsLoggedIn(true);
+        // Try to get profile, but don't fail if it doesn't exist
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
           setCurrentUser({
             id: session.user.id,
-            name: profile.name || session.user.email?.split('@')[0] || 'Usuário',
-            role: profile.role as UserRole,
+            name: profile?.name || session.user.email?.split('@')[0] || 'Usuário',
+            role: (profile?.role as UserRole) || 'viewer',
             email: session.user.email
           });
-        } else {
-          setIsLoggedIn(false);
-          setCurrentUser(null);
+        } catch (profileError) {
+          console.log('Profile not found, using default');
+          setCurrentUser({
+            id: session.user.id,
+            name: session.user.email?.split('@')[0] || 'Usuário',
+            role: 'viewer',
+            email: session.user.email
+          });
         }
       } else {
         setIsLoggedIn(false);

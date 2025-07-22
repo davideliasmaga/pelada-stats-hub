@@ -122,10 +122,18 @@ const Jogadores = () => {
     try {
       const savedPlayer = await updateSupabasePlayer(updatedPlayer);
       setPlayers(players.map(p => p.id === savedPlayer.id ? savedPlayer : p));
+      setEditingPlayer(null);
+      setEditDialogOpen(false);
       toast.success('Jogador atualizado com sucesso!');
     } catch (error) {
       console.error('Error updating player:', error);
-      toast.error('Erro ao atualizar jogador');
+    }
+  };
+
+  const handleCloseEditDialog = (open: boolean) => {
+    setEditDialogOpen(open);
+    if (!open) {
+      setEditingPlayer(null);
     }
   };
 
@@ -359,7 +367,7 @@ const Jogadores = () => {
           <EditPlayerDialog
             player={editingPlayer}
             open={editDialogOpen}
-            onOpenChange={setEditDialogOpen}
+            onOpenChange={handleCloseEditDialog}
             onSave={handleSaveEditedPlayer}
           />
         )}

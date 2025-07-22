@@ -38,7 +38,7 @@ const AccountRequestsManagement = () => {
     try {
       setProcessingId(requestId);
       await approveAccountRequest(requestId, role);
-      toast.success("Solicitação aprovada! O usuário pode agora fazer login com seu email ou Google.");
+      toast.success("Solicitação aprovada! O usuário pode agora fazer login com seu email.");
       loadRequests();
     } catch (error: any) {
       toast.error(error.message || "Erro ao aprovar conta");

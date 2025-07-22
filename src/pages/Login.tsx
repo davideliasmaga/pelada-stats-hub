@@ -131,10 +131,16 @@ export default function Login() {
             </Button>
             
             
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-                Não tem uma conta? Entre em contato com o administrador.
-              </p>
+            
+            <div className="flex flex-col gap-2">
+              <Button 
+                type="button" 
+                variant="link" 
+                className="w-full text-gray-600 hover:text-gray-900"
+                onClick={() => navigate("/register")}
+              >
+                Criar uma conta
+              </Button>
             </div>
           </form>
         </div>

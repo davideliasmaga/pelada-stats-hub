@@ -58,13 +58,15 @@ export const approveAccountRequest = async (
       throw new Error('Solicitação não encontrada');
     }
 
-    // Create user in auth system
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    // Create user via sign up (this will send email confirmation)
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email: request.email,
-      email_confirm: true,
-      user_metadata: {
-        name: request.name,
-        role: role
+      password: Math.random().toString(36).slice(-8), // Temporary password
+      options: {
+        data: {
+          name: request.name,
+          role: role
+        }
       }
     });
 

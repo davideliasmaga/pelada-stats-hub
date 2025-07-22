@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { LogoWhiteBg } from "@/assets/logo-white-bg";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -16,23 +15,18 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { MailIcon, LockIcon, UserIcon, Loader2 } from "lucide-react";
+import { MailIcon, UserIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { createAccountRequest } from "@/services/accountRequestService";
 
 const registerSchema = z.object({
   name: z.string().min(3, { message: "Nome deve ter pelo menos 3 caracteres" }),
   email: z.string().email({ message: "Email inválido" }),
-  password: z.string().min(6, { message: "Senha deve ter pelo menos 6 caracteres" }),
-  confirmPassword: z.string().min(6, { message: "Senha deve ter pelo menos 6 caracteres" }),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "As senhas não correspondem",
-  path: ["confirmPassword"],
 });
 
 type RegisterValues = z.infer<typeof registerSchema>;
 
 const Register = () => {
-  const { register: registerUser } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   
@@ -41,19 +35,22 @@ const Register = () => {
     defaultValues: {
       name: "",
       email: "",
-      password: "",
-      confirmPassword: "",
     },
   });
 
   const onSubmit = async (values: RegisterValues) => {
     setIsSubmitting(true);
     try {
-      const success = await registerUser(values.name, values.email, values.password);
-      if (success) {
-        toast.success("Conta criada com sucesso! Aguarde a aprovação do administrador.");
-        navigate("/login", { replace: true });
-      }
+      await createAccountRequest({
+        name: values.name,
+        email: values.email,
+        role: 'viewer'
+      });
+      
+      toast.success("Solicitação de conta enviada! Aguarde a aprovação do administrador.");
+      navigate("/login", { replace: true });
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao enviar solicitação");
     } finally {
       setIsSubmitting(false);
     }
@@ -66,7 +63,7 @@ const Register = () => {
           <LogoWhiteBg className="h-16 w-16 mb-4" />
           <h1 className="text-3xl font-bold text-gray-900">Pelada Sagaz</h1>
           <p className="mt-2 text-center text-gray-600">
-            Crie sua conta para acessar a plataforma
+            Solicite acesso à plataforma
           </p>
         </div>
 
@@ -115,52 +112,21 @@ const Register = () => {
                 )}
               />
               
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Senha</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <LockIcon className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                        <Input 
-                          type="password" 
-                          placeholder="********" 
-                          className="pl-10" 
-                          {...field} 
-                        />
-                      </div>
-                    </FormControl>
-                    <FormDescription>
-                      Mínimo de 6 caracteres
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirme a Senha</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <LockIcon className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                        <Input 
-                          type="password" 
-                          placeholder="********" 
-                          className="pl-10" 
-                          {...field} 
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-md mb-6">
+                <div className="flex">
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-yellow-800">
+                      Processo de Aprovação
+                    </h3>
+                    <div className="mt-2 text-sm text-yellow-700">
+                      <p>
+                        Sua solicitação será enviada para aprovação do administrador. 
+                        Você receberá um email quando sua conta for aprovada.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
               
               <div className="space-y-4">
                 <Button 
@@ -171,10 +137,10 @@ const Register = () => {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Criando conta...
+                      Enviando solicitação...
                     </>
                   ) : (
-                    "Criar Conta"
+                    "Solicitar Acesso"
                   )}
                 </Button>
 

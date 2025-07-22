@@ -7,22 +7,6 @@ export const createSupabaseTransaction = async (transaction: Omit<Transaction, '
     console.log('=== STARTING TRANSACTION CREATION ===');
     console.log('Transaction data received:', transaction);
     
-    // Verificar se o usuário está autenticado
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    console.log('Session check:', { session: !!session, sessionError });
-    
-    if (sessionError) {
-      console.error('Session error:', sessionError);
-      throw new Error(`Erro de sessão: ${sessionError.message}`);
-    }
-    
-    if (!session) {
-      console.error('No active session found');
-      throw new Error('Usuário não autenticado');
-    }
-    
-    console.log('User authenticated:', session.user.id);
-    
     // Preparar dados da transação
     const transactionToInsert = {
       date: transaction.date,
@@ -34,7 +18,6 @@ export const createSupabaseTransaction = async (transaction: Omit<Transaction, '
     console.log('Data to insert:', transactionToInsert);
     
     // Inserir transação
-    console.log('Inserting transaction...');
     const { data, error } = await supabase
       .from('transactions')
       .insert([transactionToInsert])
@@ -42,12 +25,7 @@ export const createSupabaseTransaction = async (transaction: Omit<Transaction, '
       .single();
 
     if (error) {
-      console.error('Insert error details:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      });
+      console.error('Insert error:', error);
       throw new Error(`Erro ao criar transação: ${error.message}`);
     }
 
@@ -70,15 +48,6 @@ export const createSupabaseTransaction = async (transaction: Omit<Transaction, '
 export const getSupabaseTransactions = async (): Promise<Transaction[]> => {
   try {
     console.log('=== FETCHING TRANSACTIONS ===');
-    
-    // Verificar autenticação
-    const { data: { session } } = await supabase.auth.getSession();
-    console.log('Session for fetch:', !!session);
-    
-    if (!session) {
-      console.warn('No session for fetching transactions');
-      return [];
-    }
     
     const { data, error } = await supabase
       .from('transactions')
@@ -108,12 +77,6 @@ export const getSupabaseTransactions = async (): Promise<Transaction[]> => {
 export const clearSupabaseTransactions = async (): Promise<boolean> => {
   try {
     console.log('=== CLEARING TRANSACTIONS ===');
-    
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      console.error('No session for clearing transactions');
-      return false;
-    }
     
     const { error } = await supabase
       .from('transactions')

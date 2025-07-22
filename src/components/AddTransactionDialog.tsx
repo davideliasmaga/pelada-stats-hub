@@ -16,7 +16,6 @@ import { Plus } from "lucide-react";
 import { createSupabaseTransaction } from "@/services/supabaseDataService";
 import { TransactionType } from "@/types";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 interface AddTransactionDialogProps {
   onTransactionAdded: () => void;
@@ -35,24 +34,6 @@ const AddTransactionDialog = ({ onTransactionAdded }: AddTransactionDialogProps)
     
     try {
       setLoading(true);
-      
-      // Verificar se usuário está logado ANTES de validar dados
-      console.log('Checking authentication...');
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        toast.error('Erro de autenticação');
-        return;
-      }
-      
-      if (!session) {
-        console.error('No active session');
-        toast.error('Você precisa estar logado para criar transações');
-        return;
-      }
-      
-      console.log('User is authenticated:', session.user.id);
       
       // Validações básicas
       if (!transactionDate) {

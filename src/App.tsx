@@ -17,7 +17,6 @@ import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import CreatePassword from "./pages/CreatePassword";
-import Register from "./pages/Register";
 
 const queryClient = new QueryClient();
 
@@ -33,7 +32,6 @@ const App = () => (
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/create-password" element={<CreatePassword />} />
-              <Route path="/register" element={<Register />} />
               
               {/* Protected routes - Todos os usuários autenticados (admin, mensalista, viewer) */}
               <Route path="/" element={

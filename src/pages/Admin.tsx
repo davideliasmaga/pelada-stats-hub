@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import MainLayout from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import AccountRequestsManagement from "@/components/AccountRequestsManagement";
+import UserManagement from "@/components/UserManagement";
 
 const Admin = () => {
   const { isAdmin } = useUser();
@@ -18,13 +18,13 @@ const Admin = () => {
       <div className="container mx-auto space-y-8">
         <h1 className="text-3xl font-bold">Painel Administrativo</h1>
         
-        <Tabs defaultValue="account-requests" className="w-full">
+        <Tabs defaultValue="users" className="w-full">
           <TabsList className="grid w-full grid-cols-1">
-            <TabsTrigger value="account-requests">Solicitações de Conta</TabsTrigger>
+            <TabsTrigger value="users">Gerenciamento de Usuários</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="account-requests" className="space-y-4">
-            <AccountRequestsManagement />
+          <TabsContent value="users" className="space-y-4">
+            <UserManagement />
           </TabsContent>
         </Tabs>
       </div>

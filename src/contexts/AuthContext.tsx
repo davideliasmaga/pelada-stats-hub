@@ -37,13 +37,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (mounted) {
           if (session?.user) {
             console.log('User session found:', session.user.id);
-            setIsLoggedIn(true);
-            setCurrentUser({
-              id: session.user.id,
-              name: session.user.email?.split('@')[0] || 'Usuário',
-              role: 'admin',
-              email: session.user.email
-            });
+            
+            // Get user profile with role from database
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+            
+            if (profile) {
+              setIsLoggedIn(true);
+              setCurrentUser({
+                id: session.user.id,
+                name: profile.name || session.user.email?.split('@')[0] || 'Usuário',
+                role: profile.role as UserRole,
+                email: session.user.email
+              });
+            } else {
+              console.log('No profile found for user');
+              setIsLoggedIn(false);
+              setCurrentUser(null);
+            }
           } else {
             console.log('No user session');
             setIsLoggedIn(false);
@@ -64,19 +78,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event);
       
       if (!mounted) return;
 
       if (session?.user) {
-        setIsLoggedIn(true);
-        setCurrentUser({
-          id: session.user.id,
-          name: session.user.email?.split('@')[0] || 'Usuário',
-          role: 'admin',
-          email: session.user.email
-        });
+        // Get user profile with role from database
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profile) {
+          setIsLoggedIn(true);
+          setCurrentUser({
+            id: session.user.id,
+            name: profile.name || session.user.email?.split('@')[0] || 'Usuário',
+            role: profile.role as UserRole,
+            email: session.user.email
+          });
+        } else {
+          setIsLoggedIn(false);
+          setCurrentUser(null);
+        }
       } else {
         setIsLoggedIn(false);
         setCurrentUser(null);

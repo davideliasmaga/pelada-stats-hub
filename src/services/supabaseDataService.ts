@@ -164,6 +164,44 @@ export const getSupabasePlayers = async (): Promise<Player[]> => {
   }
 };
 
+export const updateSupabasePlayer = async (player: Player): Promise<Player> => {
+  try {
+    console.log('Updating player:', player);
+    
+    const { data, error } = await supabase
+      .from('players')
+      .update({
+        name: player.name,
+        position: player.position,
+        running: player.running,
+        rating: player.rating,
+        photo: player.photo || null
+      })
+      .eq('id', player.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating player:', error);
+      throw new Error(`Erro ao atualizar jogador: ${error.message}`);
+    }
+
+    console.log('Player updated successfully:', data);
+
+    return {
+      id: data.id,
+      name: data.name,
+      position: data.position as PlayerPosition,
+      running: data.running as RunningAbility,
+      rating: Number(data.rating),
+      photo: data.photo
+    } as Player;
+  } catch (error) {
+    console.error('Error in updateSupabasePlayer:', error);
+    throw error;
+  }
+};
+
 export const deleteSupabasePlayer = async (id: string): Promise<boolean> => {
   try {
     console.log('Deleting player:', id);

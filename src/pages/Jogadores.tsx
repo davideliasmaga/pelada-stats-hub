@@ -27,8 +27,9 @@ import {
 } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, User, Image } from "lucide-react";
-import { createSupabasePlayer, getSupabasePlayers, deleteSupabasePlayer } from "@/services/supabaseDataService";
+import { Plus, User, Image, Edit } from "lucide-react";
+import { createSupabasePlayer, getSupabasePlayers, deleteSupabasePlayer, updateSupabasePlayer } from "@/services/supabaseDataService";
+import EditPlayerDialog from "@/components/EditPlayerDialog";
 import { Player, PlayerPosition, RunningAbility } from "@/types";
 import { useUser } from "@/contexts/UserContext";
 import { Navigate } from "react-router-dom";
@@ -39,6 +40,8 @@ const Jogadores = () => {
   const { isAdmin } = useUser();
   const [players, setPlayers] = useState<Player[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
   
   // Form state for new player
@@ -107,6 +110,22 @@ const Jogadores = () => {
         setPlayerPhoto(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleEditPlayer = (player: Player) => {
+    setEditingPlayer(player);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEditedPlayer = async (updatedPlayer: Player) => {
+    try {
+      const savedPlayer = await updateSupabasePlayer(updatedPlayer);
+      setPlayers(players.map(p => p.id === savedPlayer.id ? savedPlayer : p));
+      toast.success('Jogador atualizado com sucesso!');
+    } catch (error) {
+      console.error('Error updating player:', error);
+      toast.error('Erro ao atualizar jogador');
     }
   };
 
@@ -308,14 +327,25 @@ const Jogadores = () => {
                       <TableCell>{getRunningText(player.running)}</TableCell>
                       <TableCell>{player.rating.toFixed(1)}</TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-red-500 hover:text-red-700 hover:bg-red-100"
-                          onClick={() => handleDeletePlayer(player.id)}
-                        >
-                          Remover
-                        </Button>
+                        <div className="flex gap-2 justify-end">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-100"
+                            onClick={() => handleEditPlayer(player)}
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Editar
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-red-500 hover:text-red-700 hover:bg-red-100"
+                            onClick={() => handleDeletePlayer(player.id)}
+                          >
+                            Remover
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -324,6 +354,15 @@ const Jogadores = () => {
             )}
           </CardContent>
         </Card>
+
+        {editingPlayer && (
+          <EditPlayerDialog
+            player={editingPlayer}
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            onSave={handleSaveEditedPlayer}
+          />
+        )}
       </div>
     </MainLayout>
   );

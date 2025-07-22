@@ -5,11 +5,13 @@ import { PieChart, BarChart, Settings, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { getSupabaseTransactions, getSupabaseGoals, getSupabasePlayers } from "@/services/supabaseDataService";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getSupabaseTransactions, getSupabaseGoals, getSupabasePlayers, getSupabaseGames } from "@/services/supabaseDataService";
 import MainLayout from "@/components/layout/MainLayout";
 import { useUser } from "@/contexts/UserContext";
 import { LogoWhiteBg } from "@/assets/logo-white-bg";
-import { Player, Goal, Transaction } from "@/types";
+import { Player, Goal, Transaction, Game } from "@/types";
+import { generateQuarterPeriods, QuarterPeriod } from "@/utils/quarterPeriods";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -17,6 +19,11 @@ const Index = () => {
   const [topScorers, setTopScorers] = useState<Array<{ player: Player; goals: number }>>([]);
   const [balance, setBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [games, setGames] = useState<Game[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('');
+  const [quarterPeriods, setQuarterPeriods] = useState<QuarterPeriod[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -28,42 +35,40 @@ const Index = () => {
       console.log('Loading dashboard data...');
       
       // Carregar dados do Supabase com tratamento de erro mais robusto
-      const [players, goals, transactions] = await Promise.allSettled([
+      const [players, goals, transactions, games] = await Promise.allSettled([
         getSupabasePlayers(),
         getSupabaseGoals(),
-        getSupabaseTransactions()
+        getSupabaseTransactions(),
+        getSupabaseGames()
       ]);
 
       // Processar players
       const playersData = players.status === 'fulfilled' ? players.value : [];
       console.log('Players loaded:', playersData.length);
+      setPlayers(playersData);
 
       // Processar goals
       const goalsData = goals.status === 'fulfilled' ? goals.value : [];
       console.log('Goals loaded:', goalsData.length);
+      setGoals(goalsData);
 
       // Processar transactions
       const transactionsData = transactions.status === 'fulfilled' ? transactions.value : [];
       console.log('Transactions loaded:', transactionsData.length);
 
-      // Calcular artilheiros
-      if (playersData.length > 0 && goalsData.length > 0) {
-        const playerGoals = goalsData.reduce((acc, goal) => {
-          acc[goal.playerId] = (acc[goal.playerId] || 0) + goal.count;
-          return acc;
-        }, {} as Record<string, number>);
+      // Processar games
+      const gamesData = games.status === 'fulfilled' ? games.value : [];
+      console.log('Games loaded:', gamesData.length);
+      setGames(gamesData);
 
-        const topScorersData = Object.entries(playerGoals)
-          .map(([playerId, goalCount]) => {
-            const player = playersData.find(p => p.id === playerId);
-            return player ? { player, goals: goalCount } : null;
-          })
-          .filter(Boolean)
-          .sort((a, b) => b!.goals - a!.goals)
-          .slice(0, 3) as Array<{ player: Player; goals: number }>;
-
-        setTopScorers(topScorersData);
+      // Gerar períodos de trimestre
+      const periods = generateQuarterPeriods(gamesData);
+      setQuarterPeriods(periods);
+      if (periods.length > 0 && !selectedPeriod) {
+        setSelectedPeriod(periods[0].id); // Selecionar o primeiro período (mais recente)
       }
+
+      calculateTopScorers();
 
       // Calcular saldo financeiro
       if (transactionsData.length > 0) {
@@ -86,6 +91,45 @@ const Index = () => {
       setLoading(false);
     }
   };
+
+  const calculateTopScorers = () => {
+    if (players.length === 0 || goals.length === 0 || games.length === 0) return;
+
+    const selectedPeriodData = quarterPeriods.find(p => p.id === selectedPeriod);
+    
+    // Filtrar gols baseado no período selecionado
+    const filteredGoals = selectedPeriodData ? goals.filter(goal => {
+      const game = games.find(g => g.id === goal.gameId);
+      if (!game) return false;
+      
+      const gameDate = new Date(game.date);
+      const periodStart = new Date(selectedPeriodData.start);
+      const periodEnd = new Date(selectedPeriodData.end);
+      
+      return gameDate >= periodStart && gameDate <= periodEnd;
+    }) : goals;
+
+    const playerGoals = filteredGoals.reduce((acc, goal) => {
+      acc[goal.playerId] = (acc[goal.playerId] || 0) + goal.count;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const topScorersData = Object.entries(playerGoals)
+      .map(([playerId, goalCount]) => {
+        const player = players.find(p => p.id === playerId);
+        return player ? { player, goals: goalCount } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => b!.goals - a!.goals)
+      .slice(0, 3) as Array<{ player: Player; goals: number }>;
+
+    setTopScorers(topScorersData);
+  };
+
+  // Recalcular quando o período ou dados mudarem
+  useEffect(() => {
+    calculateTopScorers();
+  }, [selectedPeriod, players, goals, games, quarterPeriods]);
 
   const getPlayerInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -123,10 +167,26 @@ const Index = () => {
             <Card className="overflow-hidden">
               <div className="bg-gradient-to-r from-gray-900 to-gray-700">
                 <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Award className="h-5 w-5 text-yellow-400" />
-                    Artilheiro Geral
-                  </CardTitle>
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <Award className="h-5 w-5 text-yellow-400" />
+                      Artilheiro
+                    </CardTitle>
+                    {quarterPeriods.length > 0 && (
+                      <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                        <SelectTrigger className="w-48 bg-white text-black">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {quarterPeriods.map((period) => (
+                            <SelectItem key={period.id} value={period.id}>
+                              {period.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col md:flex-row items-center gap-6 py-4">
@@ -176,11 +236,29 @@ const Index = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart className="h-5 w-5 text-gray-500" />
-                Artilharia
-              </CardTitle>
-              <CardDescription>Top 3 artilheiros</CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart className="h-5 w-5 text-gray-500" />
+                    Artilharia
+                  </CardTitle>
+                  <CardDescription>Top 3 artilheiros</CardDescription>
+                </div>
+                {quarterPeriods.length > 0 && (
+                  <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white z-50">
+                      {quarterPeriods.map((period) => (
+                        <SelectItem key={period.id} value={period.id}>
+                          {period.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {topScorers.length === 0 ? (

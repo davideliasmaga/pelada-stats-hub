@@ -15,17 +15,21 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trophy, Target, Calendar } from "lucide-react";
 import { getSupabasePlayers, getSupabaseGoals, getSupabaseGames } from "@/services/supabaseDataService";
 import { Player, Goal, Game, GameType } from "@/types";
 import MainLayout from "@/components/layout/MainLayout";
 import AddGoalsDialog from "@/components/AddGoalsDialog";
+import { generateQuarterPeriods, QuarterPeriod } from "@/utils/quarterPeriods";
 
 const Artilharia = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('');
+  const [quarterPeriods, setQuarterPeriods] = useState<QuarterPeriod[]>([]);
 
   useEffect(() => {
     loadData();
@@ -43,6 +47,13 @@ const Artilharia = () => {
       setPlayers(playersData);
       setGoals(goalsData);
       setGames(gamesData);
+
+      // Gerar períodos de trimestre
+      const periods = generateQuarterPeriods(gamesData);
+      setQuarterPeriods(periods);
+      if (periods.length > 0 && !selectedPeriod) {
+        setSelectedPeriod(periods[0].id); // Selecionar o primeiro período (mais recente)
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -58,14 +69,18 @@ const Artilharia = () => {
     period?: { start: string; end: string },
     gameType?: GameType
   ): Array<{ player: Player; goals: number }> => {
+    // Use selectedPeriod if no specific period is provided
+    const selectedPeriodData = period ? null : quarterPeriods.find(p => p.id === selectedPeriod);
+    const activePeriod = period || selectedPeriodData;
+
     const filteredGoals = goals.filter(goal => {
       const game = games.find(g => g.id === goal.gameId);
       if (!game) return false;
       
       const gameDate = new Date(game.date);
       const matchesGameType = !gameType || game.type === gameType;
-      const matchesPeriod = !period || 
-        (gameDate >= new Date(period.start) && gameDate <= new Date(period.end));
+      const matchesPeriod = !activePeriod || 
+        (gameDate >= new Date(activePeriod.start) && gameDate <= new Date(activePeriod.end));
       
       return matchesGameType && matchesPeriod;
     });
@@ -110,7 +125,23 @@ const Artilharia = () => {
     <MainLayout>
       <div className="container mx-auto space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h1 className="text-3xl font-bold">Artilharia</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-bold">Artilharia</h1>
+            {quarterPeriods.length > 0 && (
+              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white z-50">
+                  {quarterPeriods.map((period) => (
+                    <SelectItem key={period.id} value={period.id}>
+                      {period.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
           <AddGoalsDialog onGoalsAdded={handleGoalsAdded} />
         </div>
 

@@ -29,19 +29,25 @@ export default defineConfig({
     },
   },
   build: {
-    minify: false,
+    minify: 'terser',
     outDir: 'dist',
     assetsDir: 'assets',
     emptyOutDir: true,
     rollupOptions: {
       output: {
         format: 'es',
-        entryFileNames: 'assets/[name].js',
-        chunkFileNames: 'assets/[name].js',
-        assetFileNames: 'assets/[name].[ext]',
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
+          supabase: ['@supabase/supabase-js'],
+          utils: ['clsx', 'tailwind-merge', 'date-fns']
+        }
       },
       external: [],
-      treeshake: false,
+      treeshake: true,
       context: 'globalThis',
     },
     sourcemap: false,
@@ -49,8 +55,8 @@ export default defineConfig({
     ssrManifest: false,
     watch: null,
     reportCompressedSize: false,
-    cssCodeSplit: false,
-    target: 'es2015',
+    cssCodeSplit: true,
+    target: 'es2020',
     commonjsOptions: {
       include: [/node_modules/],
       extensions: ['.js', '.cjs'],
@@ -58,7 +64,15 @@ export default defineConfig({
   },
   optimizeDeps: {
     disabled: false,
-    include: ['react', 'react-dom']
+    include: [
+      'react', 
+      'react-dom', 
+      '@supabase/supabase-js',
+      '@tanstack/react-query',
+      'react-router-dom',
+      'lucide-react',
+      'date-fns'
+    ]
   },
   esbuild: {
     jsxFactory: 'React.createElement',

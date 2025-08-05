@@ -39,44 +39,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.log('User session found:', session.user.id);
             setIsLoggedIn(true);
             
-            // Try to get profile, but don't fail if it doesn't exist
-            try {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-              
-              setCurrentUser({
-                id: session.user.id,
-                name: profile?.name || session.user.email?.split('@')[0] || 'Usuário',
-                role: (profile?.role as UserRole) || 'viewer',
-                email: session.user.email
-              });
-            } catch (profileError) {
-              console.log('Profile not found, using default');
-              setCurrentUser({
-                id: session.user.id,
-                name: session.user.email?.split('@')[0] || 'Usuário',
-                role: 'viewer',
-                email: session.user.email
-              });
-            }
+            // Use setTimeout to avoid conflicts with onAuthStateChange
+            setTimeout(async () => {
+              try {
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', session.user.id)
+                  .single();
+                
+                setCurrentUser({
+                  id: session.user.id,
+                  name: profile?.name || session.user.email?.split('@')[0] || 'Usuário',
+                  role: (profile?.role as UserRole) || 'viewer',
+                  email: session.user.email
+                });
+              } catch (profileError) {
+                console.log('Profile not found, using default');
+                setCurrentUser({
+                  id: session.user.id,
+                  name: session.user.email?.split('@')[0] || 'Usuário',
+                  role: 'viewer',
+                  email: session.user.email
+                });
+              }
+            }, 0);
           } else {
             console.log('No user session');
             setIsLoggedIn(false);
             setCurrentUser(null);
           }
+          
+          setIsLoading(false);
         }
       } catch (error) {
         console.error('Auth init error:', error);
         if (mounted) {
           setIsLoggedIn(false);
           setCurrentUser(null);
-        }
-      } finally {
-        if (mounted) {
-          console.log('Auth initialization complete - setting loading false');
           setIsLoading(false);
         }
       }
@@ -90,29 +90,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (session?.user) {
         setIsLoggedIn(true);
         
-        // Try to get profile, but don't fail if it doesn't exist
-        try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          
-          setCurrentUser({
-            id: session.user.id,
-            name: profile?.name || session.user.email?.split('@')[0] || 'Usuário',
-            role: (profile?.role as UserRole) || 'viewer',
-            email: session.user.email
-          });
-        } catch (profileError) {
-          console.log('Profile not found, using default');
-          setCurrentUser({
-            id: session.user.id,
-            name: session.user.email?.split('@')[0] || 'Usuário',
-            role: 'viewer',
-            email: session.user.email
-          });
-        }
+        // Use setTimeout to avoid deadlock with onAuthStateChange
+        setTimeout(async () => {
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+            
+            setCurrentUser({
+              id: session.user.id,
+              name: profile?.name || session.user.email?.split('@')[0] || 'Usuário',
+              role: (profile?.role as UserRole) || 'viewer',
+              email: session.user.email
+            });
+          } catch (profileError) {
+            console.log('Profile not found, using default');
+            setCurrentUser({
+              id: session.user.id,
+              name: session.user.email?.split('@')[0] || 'Usuário',
+              role: 'viewer',
+              email: session.user.email
+            });
+          }
+        }, 0);
       } else {
         setIsLoggedIn(false);
         setCurrentUser(null);

@@ -42,8 +42,9 @@ export default function Login() {
     try {
       const success = await login(email, password);
       console.log("Login result:", { success });
-      if (!success) {
-        setError("Falha ao realizar login. Verifique suas credenciais.");
+      if (success) {
+        const from = location.state?.from?.pathname || "/";
+        navigate(from, { replace: true });
       }
     } catch (err: any) {
       console.error("Login error:", err);

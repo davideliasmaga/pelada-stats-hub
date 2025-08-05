@@ -8,7 +8,7 @@ interface AuthContextType {
   isLoggedIn: boolean;
   isLoading: boolean;
   users: User[];
-  login: (email: string, password: string) => Promise<{ error: any }>;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<boolean>;
   createPassword: (email: string, token: string, password: string) => Promise<boolean>;
@@ -302,7 +302,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isLoggedIn, isLoading]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     try {
       console.log('Attempting login for:', email);
       
@@ -313,14 +313,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (error) {
         console.error('Login error:', error);
-      } else {
-        console.log('Login successful');
+        toast.error('Credenciais inválidas. Verifique seu email e senha.');
+        return false;
       }
       
-      return { error };
+      console.log('Login successful');
+      toast.success('Login realizado com sucesso!');
+      return true;
     } catch (error) {
       console.error('Login exception:', error);
-      return { error };
+      toast.error('Erro ao fazer login. Tente novamente.');
+      return false;
     }
   };
 

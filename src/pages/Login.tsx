@@ -17,21 +17,16 @@ export default function Login() {
   const location = useLocation();
   const { login, isLoggedIn, isLoading: authLoading } = useAuth();
   
-  // Check if user is already logged in - only redirect once when auth is ready
+  // Redirect if already logged in
   useEffect(() => {
-    console.log("Login component: checking auth state", { isLoggedIn, authLoading });
+    console.log("Login: Auth state check", { isLoggedIn, authLoading });
     
-    if (authLoading) {
-      console.log("Auth is still loading...");
-      return;
-    }
-    
-    if (isLoggedIn) {
-      console.log("User is logged in, redirecting...");
+    if (!authLoading && isLoggedIn) {
+      console.log("Login: User is logged in, redirecting");
       const from = location.state?.from?.pathname || "/";
       navigate(from, { replace: true });
     }
-  }, [authLoading]); // Only depend on authLoading to avoid infinite loops
+  }, [isLoggedIn, authLoading, navigate, location]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

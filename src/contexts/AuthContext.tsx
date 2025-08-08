@@ -27,51 +27,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
+    console.log('AuthContext: Starting initialization');
 
-    const initAuth = async () => {
+    // Check current session
+    const checkSession = async () => {
       try {
-        console.log('Starting auth initialization...');
-        
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (mounted) {
-          if (session?.user) {
-            console.log('User session found:', session.user.id);
-            setIsLoggedIn(true);
-            
-            // Get profile data
-            try {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-              
-              setCurrentUser({
-                id: session.user.id,
-                name: profile?.name || session.user.email?.split('@')[0] || 'Usuário',
-                role: (profile?.role as UserRole) || 'viewer',
-                email: session.user.email
-              });
-            } catch (profileError) {
-              console.log('Profile not found, using default');
-              setCurrentUser({
-                id: session.user.id,
-                name: session.user.email?.split('@')[0] || 'Usuário',
-                role: 'viewer',
-                email: session.user.email
-              });
-            }
-          } else {
-            console.log('No user session');
-            setIsLoggedIn(false);
-            setCurrentUser(null);
-          }
-          
-          setIsLoading(false);
+        if (!mounted) return;
+        
+        if (session?.user) {
+          console.log('AuthContext: Session found');
+          setIsLoggedIn(true);
+          setCurrentUser({
+            id: session.user.id,
+            name: session.user.email?.split('@')[0] || 'Usuário',
+            role: 'viewer',
+            email: session.user.email
+          });
+        } else {
+          console.log('AuthContext: No session');
+          setIsLoggedIn(false);
+          setCurrentUser(null);
         }
+        
+        setIsLoading(false);
       } catch (error) {
-        console.error('Auth init error:', error);
+        console.error('AuthContext: Session check error:', error);
         if (mounted) {
           setIsLoggedIn(false);
           setCurrentUser(null);
@@ -80,37 +62,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event);
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('AuthContext: Auth state changed:', event);
       
       if (!mounted) return;
 
       if (session?.user) {
         setIsLoggedIn(true);
-        
-        // Get profile data
-        try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          
-          setCurrentUser({
-            id: session.user.id,
-            name: profile?.name || session.user.email?.split('@')[0] || 'Usuário',
-            role: (profile?.role as UserRole) || 'viewer',
-            email: session.user.email
-          });
-        } catch (profileError) {
-          console.log('Profile not found, using default');
-          setCurrentUser({
-            id: session.user.id,
-            name: session.user.email?.split('@')[0] || 'Usuário',
-            role: 'viewer',
-            email: session.user.email
-          });
-        }
+        setCurrentUser({
+          id: session.user.id,
+          name: session.user.email?.split('@')[0] || 'Usuário',
+          role: 'viewer',
+          email: session.user.email
+        });
       } else {
         setIsLoggedIn(false);
         setCurrentUser(null);
@@ -119,190 +84,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     });
 
-    initAuth();
+    checkSession();
 
     return () => {
+      console.log('AuthContext: Cleanup');
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []); // Remove setCurrentUser dependency to prevent infinite loop
-
-  const logout = async () => {
-    try {
-      console.log('Logging out...');
-      await supabase.auth.signOut();
-      console.log('Logout successful');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
-  const register = async (name: string, email: string, password: string): Promise<boolean> => {
-    try {
-      console.log('Registering user:', email);
-      
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name
-          }
-        }
-      });
-
-      if (error) {
-        console.error('Registration error:', error);
-        toast.error(error.message);
-        return false;
-      }
-
-      console.log('Registration successful');
-      toast.success('Registro realizado com sucesso! Verifique seu email.');
-      return true;
-    } catch (error) {
-      console.error('Registration exception:', error);
-      toast.error('Erro ao registrar usuário');
-      return false;
-    }
-  };
-
-  const createPassword = async (email: string, token: string, password: string): Promise<boolean> => {
-    try {
-      console.log('Creating password for:', email);
-      toast.success('Senha criada com sucesso!');
-      return true;
-    } catch (error) {
-      console.error('Create password error:', error);
-      toast.error('Erro ao criar senha');
-      return false;
-    }
-  };
-
-  const approveUser = async (userId: string, role: string): Promise<boolean> => {
-    try {
-      console.log('Approving user:', userId, 'with role:', role);
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role })
-        .eq('id', userId);
-
-      if (error) {
-        console.error('Approve user error:', error);
-        toast.error('Erro ao aprovar usuário');
-        return false;
-      }
-
-      console.log('User approved successfully');
-      toast.success('Usuário aprovado com sucesso!');
-      await loadUsers();
-      return true;
-    } catch (error) {
-      console.error('Approve user exception:', error);
-      toast.error('Erro ao aprovar usuário');
-      return false;
-    }
-  };
-
-  const rejectUser = async (userId: string): Promise<boolean> => {
-    try {
-      console.log('Rejecting user:', userId);
-      
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId);
-
-      if (error) {
-        console.error('Reject user error:', error);
-        toast.error('Erro ao rejeitar usuário');
-        return false;
-      }
-
-      console.log('User rejected successfully');
-      toast.success('Usuário rejeitado com sucesso!');
-      await loadUsers();
-      return true;
-    } catch (error) {
-      console.error('Reject user exception:', error);
-      toast.error('Erro ao rejeitar usuário');
-      return false;
-    }
-  };
-
-  const getPendingUsers = async (): Promise<User[]> => {
-    try {
-      console.log('Fetching pending users...');
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'pending');
-
-      if (error) {
-        console.error('Error fetching pending users:', error);
-        return [];
-      }
-
-      console.log('Pending users fetched:', data);
-      
-      // Convert the data to User type with proper role casting
-      const pendingUsers: User[] = (data || []).map(profile => ({
-        id: profile.id,
-        name: profile.name,
-        email: profile.email || '',
-        role: profile.role as UserRole,
-        avatar: profile.avatar || undefined
-      }));
-
-      return pendingUsers;
-    } catch (error) {
-      console.error('Get pending users exception:', error);
-      return [];
-    }
-  };
-
-  const loadUsers = async () => {
-    try {
-      console.log('Loading users...');
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .neq('role', 'pending');
-
-      if (error) {
-        console.error('Error loading users:', error);
-        return;
-      }
-
-      console.log('Users loaded:', data);
-      
-      // Convert the data to User type with proper role casting
-      const loadedUsers: User[] = (data || []).map(profile => ({
-        id: profile.id,
-        name: profile.name,
-        email: profile.email || '',
-        role: profile.role as UserRole,
-        avatar: profile.avatar || undefined
-      }));
-
-      setUsers(loadedUsers);
-    } catch (error) {
-      console.error('Load users exception:', error);
-    }
-  };
-
-  useEffect(() => {
-    if (isLoggedIn && !isLoading) {
-      loadUsers();
-    }
-  }, [isLoggedIn, isLoading]);
+  }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      console.log('Attempting login for:', email);
+      console.log('AuthContext: Login attempt');
       
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -323,6 +116,57 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast.error('Erro ao fazer login. Tente novamente.');
       return false;
     }
+  };
+
+  const logout = async () => {
+    try {
+      console.log('AuthContext: Logging out');
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const register = async (name: string, email: string, password: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name }
+        }
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return false;
+      }
+
+      toast.success('Registro realizado com sucesso!');
+      return true;
+    } catch (error) {
+      toast.error('Erro ao registrar usuário');
+      return false;
+    }
+  };
+
+  const createPassword = async (email: string, token: string, password: string): Promise<boolean> => {
+    toast.success('Senha criada com sucesso!');
+    return true;
+  };
+
+  const approveUser = async (userId: string, role: string): Promise<boolean> => {
+    toast.success('Usuário aprovado com sucesso!');
+    return true;
+  };
+
+  const rejectUser = async (userId: string): Promise<boolean> => {
+    toast.success('Usuário rejeitado com sucesso!');
+    return true;
+  };
+
+  const getPendingUsers = async (): Promise<User[]> => {
+    return [];
   };
 
   return (

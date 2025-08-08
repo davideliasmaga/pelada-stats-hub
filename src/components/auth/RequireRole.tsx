@@ -13,8 +13,14 @@ interface RequireRoleProps {
 const RequireRole = ({ children, allowedRoles, redirectTo = '/' }: RequireRoleProps) => {
   const { currentUser } = useUser();
 
+  // Don't redirect to login here - that's RequireAuth's job
+  // If there's no currentUser, just show a loading state and let RequireAuth handle it
   if (!currentUser) {
-    return <Navigate to="/login" replace />;
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <p className="text-gray-600">Verificando permissões...</p>
+      </div>
+    </div>;
   }
 
   if (!allowedRoles.includes(currentUser.role)) {

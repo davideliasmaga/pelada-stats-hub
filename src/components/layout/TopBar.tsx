@@ -18,14 +18,8 @@ import { LogoWhiteBg } from "@/assets/logo-white-bg";
 import { LogOut, User } from "lucide-react";
 
 const TopBar = () => {
-  const { currentUser, setCurrentUser } = useUser();
+  const { currentUser } = useUser();
   const { logout } = useAuth();
-  
-  const handleRoleChange = (role: UserRole) => {
-    if (currentUser) {
-      setCurrentUser({ ...currentUser, role });
-    }
-  };
   
   const getInitials = (name: string) => {
     return name
@@ -44,32 +38,6 @@ const TopBar = () => {
       </div>
       
       <div className="flex items-center gap-4">
-        {/* Role switcher for demo purposes */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="rounded-full">
-              {currentUser?.role === 'admin' 
-                ? 'Admin' 
-                : currentUser?.role === 'mensalista' 
-                  ? 'Mensalista' 
-                  : 'Viewer'}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuLabel>Trocar Função</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleRoleChange('admin')}>
-              Admin
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleRoleChange('mensalista')}>
-              Mensalista
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleRoleChange('viewer')}>
-              Viewer
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Avatar className="cursor-pointer">

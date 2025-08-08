@@ -39,10 +39,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (session?.user) {
           console.log('AuthContext: Session found');
           setIsLoggedIn(true);
+          
+          // Fetch user profile from database
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('name, role')
+            .eq('id', session.user.id)
+            .single();
+          
           setCurrentUser({
             id: session.user.id,
-            name: session.user.email?.split('@')[0] || 'Usuário',
-            role: 'viewer',
+            name: profile?.name || session.user.email?.split('@')[0] || 'Usuário',
+            role: (profile?.role as UserRole) || 'viewer',
             email: session.user.email
           });
         } else {
@@ -70,12 +78,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (session?.user) {
         setIsLoggedIn(true);
-        setCurrentUser({
-          id: session.user.id,
-          name: session.user.email?.split('@')[0] || 'Usuário',
-          role: 'viewer',
-          email: session.user.email
-        });
+        
+        // Fetch user profile from database on auth state change
+        setTimeout(async () => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('name, role')
+            .eq('id', session.user.id)
+            .single();
+          
+          setCurrentUser({
+            id: session.user.id,
+            name: profile?.name || session.user.email?.split('@')[0] || 'Usuário',
+            role: (profile?.role as UserRole) || 'viewer',
+            email: session.user.email
+          });
+        }, 0);
       } else {
         setIsLoggedIn(false);
         setCurrentUser(null);

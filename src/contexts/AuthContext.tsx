@@ -125,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [setCurrentUser]);
+  }, []); // Remove setCurrentUser dependency to prevent infinite loop
 
   const logout = async () => {
     try {

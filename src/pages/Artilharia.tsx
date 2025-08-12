@@ -22,8 +22,10 @@ import { Player, Goal, Game, GameType } from "@/types";
 import MainLayout from "@/components/layout/MainLayout";
 import AddGoalsDialog from "@/components/AddGoalsDialog";
 import { generateQuarterPeriods, QuarterPeriod } from "@/utils/quarterPeriods";
+import { useUser } from "@/contexts/UserContext";
 
 const Artilharia = () => {
+  const { isAdmin } = useUser();
   const [players, setPlayers] = useState<Player[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [games, setGames] = useState<Game[]>([]);
@@ -142,7 +144,7 @@ const Artilharia = () => {
               </Select>
             )}
           </div>
-          <AddGoalsDialog onGoalsAdded={handleGoalsAdded} />
+          {isAdmin && <AddGoalsDialog onGoalsAdded={handleGoalsAdded} />}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

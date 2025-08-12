@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { getSupabaseGames, getGamePlayers, createSupabaseGoal } from "@/services/supabaseDataService";
 import { Game, Player } from "@/types";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ const AddGoalsDialog = ({ onGoalsAdded }: AddGoalsDialogProps) => {
   const [playersPresent, setPlayersPresent] = useState<Player[]>([]);
   const [playerGoals, setPlayerGoals] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
+  const [playerSearchTerm, setPlayerSearchTerm] = useState('');
 
   useEffect(() => {
     if (dialogOpen) {
@@ -99,6 +100,7 @@ const AddGoalsDialog = ({ onGoalsAdded }: AddGoalsDialogProps) => {
       setSelectedGameId("");
       setPlayersPresent([]);
       setPlayerGoals({});
+      setPlayerSearchTerm('');
       setDialogOpen(false);
     } catch (error) {
       console.error('Error saving goals:', error);
@@ -116,6 +118,10 @@ const AddGoalsDialog = ({ onGoalsAdded }: AddGoalsDialogProps) => {
   const getGameTypeText = (type: string) => {
     return type === 'pelada' ? 'Pelada' : 'Campeonato';
   };
+
+  const filteredPlayersPresent = playersPresent.filter(player =>
+    player.name.toLowerCase().includes(playerSearchTerm.toLowerCase())
+  );
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -150,8 +156,20 @@ const AddGoalsDialog = ({ onGoalsAdded }: AddGoalsDialogProps) => {
           {playersPresent.length > 0 && (
             <div className="space-y-3">
               <Label>Jogadores Presentes</Label>
+              
+              {/* Search bar for players */}
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar jogador..."
+                  value={playerSearchTerm}
+                  onChange={(e) => setPlayerSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              
               <div className="max-h-60 overflow-y-auto space-y-2">
-                {playersPresent.map((player) => (
+                {filteredPlayersPresent.map((player) => (
                   <div key={player.id} className="flex items-center justify-between gap-2 p-2 border rounded">
                     <span className="font-medium">{player.name}</span>
                     <div className="flex items-center gap-2">

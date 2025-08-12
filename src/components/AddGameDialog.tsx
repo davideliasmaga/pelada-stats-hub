@@ -13,8 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus } from "lucide-react";
-import { getSupabasePlayers, createSupabaseGame } from "@/services/supabaseDataService";
+import { Plus, Search } from "lucide-react";
+import { getSupabasePlayers, createSupabaseGame, createSupabasePlayer } from "@/services/supabaseDataService";
 import { Player, GameType } from "@/types";
 import { toast } from "sonner";
 
@@ -29,6 +29,8 @@ const AddGameDialog = ({ onGameAdded }: AddGameDialogProps) => {
   const [gameType, setGameType] = useState<GameType>('pelada');
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [newPlayerName, setNewPlayerName] = useState('');
 
   useEffect(() => {
     if (dialogOpen) {
@@ -49,6 +51,33 @@ const AddGameDialog = ({ onGameAdded }: AddGameDialogProps) => {
       toast.error(errorMessage);
     }
   };
+
+  const handleCreatePlayer = async () => {
+    if (!newPlayerName.trim()) {
+      toast.error('Digite o nome do jogador');
+      return;
+    }
+
+    try {
+      const newPlayer = await createSupabasePlayer({
+        name: newPlayerName.trim(),
+        position: 'atacante',
+        rating: 7.0,
+        running: 'sim'
+      });
+      
+      toast.success('Jogador criado com sucesso!');
+      setNewPlayerName('');
+      loadPlayers(); // Reload players list
+    } catch (error) {
+      console.error('Error creating player:', error);
+      toast.error('Erro ao criar jogador');
+    }
+  };
+
+  const filteredPlayers = players.filter(player =>
+    player.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handlePlayerToggle = (playerId: string) => {
     setSelectedPlayers(prev => 
@@ -84,6 +113,8 @@ const AddGameDialog = ({ onGameAdded }: AddGameDialogProps) => {
       setGameDate('');
       setGameType('pelada');
       setSelectedPlayers([]);
+      setSearchTerm('');
+      setNewPlayerName('');
       setDialogOpen(false);
     } catch (error) {
       console.error('Error saving game:', error);
@@ -133,8 +164,38 @@ const AddGameDialog = ({ onGameAdded }: AddGameDialogProps) => {
 
           <div className="space-y-3">
             <Label>Jogadores Presentes</Label>
+            
+            {/* Search bar */}
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar jogador..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+
+            {/* Create new player */}
+            <div className="flex gap-2">
+              <Input
+                placeholder="Nome do novo jogador"
+                value={newPlayerName}
+                onChange={(e) => setNewPlayerName(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCreatePlayer}
+                disabled={!newPlayerName.trim()}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            
             <div className="max-h-48 overflow-y-auto space-y-2">
-              {players.map((player) => (
+              {filteredPlayers.map((player) => (
                 <div key={player.id} className="flex items-center space-x-2">
                   <Checkbox
                     id={`player-${player.id}`}

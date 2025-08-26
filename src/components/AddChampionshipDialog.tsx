@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -25,6 +26,7 @@ const AddChampionshipDialog = ({ open, onOpenChange, onAdd, players }: AddChampi
   const [gamePlayers, setGamePlayers] = useState<Player[]>([]);
   const [gameSearchOpen, setGameSearchOpen] = useState(false);
   const [playerSearchOpen, setPlayerSearchOpen] = useState(false);
+  const [playerSearchTerm, setPlayerSearchTerm] = useState('');
 
   useEffect(() => {
     loadGames();
@@ -94,6 +96,10 @@ const AddChampionshipDialog = ({ open, onOpenChange, onAdd, players }: AddChampi
     );
   };
 
+  const filteredPlayers = gamePlayers.filter(player =>
+    player.name.toLowerCase().includes(playerSearchTerm.toLowerCase())
+  );
+
   const selectedGame = games.find(g => g.id === selectedGameId);
 
   return (
@@ -155,11 +161,19 @@ const AddChampionshipDialog = ({ open, onOpenChange, onAdd, players }: AddChampi
           {selectedGameId && (
             <div className="space-y-2">
               <Label>Campeões ({selectedPlayerIds.length} selecionados)</Label>
+              <Input
+                placeholder="Buscar jogador..."
+                value={playerSearchTerm}
+                onChange={(e) => setPlayerSearchTerm(e.target.value)}
+                className="mb-2"
+              />
               <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-2">
-                {gamePlayers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhum jogador encontrado neste jogo.</p>
+                {filteredPlayers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {playerSearchTerm ? 'Nenhum jogador encontrado com esse nome.' : 'Nenhum jogador encontrado neste jogo.'}
+                  </p>
                 ) : (
-                  gamePlayers.map((player) => (
+                  filteredPlayers.map((player) => (
                     <div key={player.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={player.id}

@@ -1,28 +1,32 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PieChart, BarChart, Settings, Award } from "lucide-react";
+import { PieChart, BarChart, Settings, Award, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getSupabaseTransactions, getSupabaseGoals, getSupabasePlayers, getSupabaseGames } from "@/services/supabaseDataService";
+import { getSupabaseChampionships } from "@/services/championshipService";
 import MainLayout from "@/components/layout/MainLayout";
 import { useUser } from "@/contexts/UserContext";
 import { LogoWhiteBg } from "@/assets/logo-white-bg";
-import { Player, Goal, Transaction, Game } from "@/types";
+import { Player, Goal, Transaction, Game, Championship } from "@/types";
 import { generateQuarterPeriods, QuarterPeriod } from "@/utils/quarterPeriods";
 
 const Index = () => {
   const navigate = useNavigate();
   const { isAdmin, isMensalista } = useUser();
   const [topScorers, setTopScorers] = useState<Array<{ player: Player; goals: number }>>([]);
+  const [topChampions, setTopChampions] = useState<Array<{ player: Player; championships: number }>>([]);
   const [balance, setBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [games, setGames] = useState<Game[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [championships, setChampionships] = useState<Championship[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
+  const [selectedChampionshipYear, setSelectedChampionshipYear] = useState<number>(2025);
   const [quarterPeriods, setQuarterPeriods] = useState<QuarterPeriod[]>([]);
 
   useEffect(() => {
@@ -35,11 +39,12 @@ const Index = () => {
       console.log('Loading dashboard data...');
       
       // Carregar dados do Supabase com tratamento de erro mais robusto
-      const [players, goals, transactions, games] = await Promise.allSettled([
+      const [players, goals, transactions, games, championships] = await Promise.allSettled([
         getSupabasePlayers(),
         getSupabaseGoals(),
         getSupabaseTransactions(),
-        getSupabaseGames()
+        getSupabaseGames(),
+        getSupabaseChampionships()
       ]);
 
       // Processar players
@@ -61,6 +66,11 @@ const Index = () => {
       console.log('Games loaded:', gamesData.length);
       setGames(gamesData);
 
+      // Processar championships
+      const championshipsData = championships.status === 'fulfilled' ? championships.value : [];
+      console.log('Championships loaded:', championshipsData.length);
+      setChampionships(championshipsData);
+
       // Gerar períodos de trimestre
       const periods = generateQuarterPeriods(gamesData);
       setQuarterPeriods(periods);
@@ -69,6 +79,7 @@ const Index = () => {
       }
 
       calculateTopScorers();
+      calculateTopChampions();
 
       // Calcular saldo financeiro
       if (transactionsData.length > 0) {
@@ -126,10 +137,37 @@ const Index = () => {
     setTopScorers(topScorersData);
   };
 
+  const calculateTopChampions = () => {
+    if (players.length === 0 || championships.length === 0) return;
+
+    // Filtrar campeonatos por ano
+    const filteredChampionships = championships.filter(championship => championship.year === selectedChampionshipYear);
+
+    const playerChampionships = filteredChampionships.reduce((acc, championship) => {
+      acc[championship.playerId] = (acc[championship.playerId] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const topChampionsData = Object.entries(playerChampionships)
+      .map(([playerId, championshipCount]) => {
+        const player = players.find(p => p.id === playerId);
+        return player ? { player, championships: championshipCount } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => b!.championships - a!.championships)
+      .slice(0, 3) as Array<{ player: Player; championships: number }>;
+
+    setTopChampions(topChampionsData);
+  };
+
   // Recalcular quando o período ou dados mudarem
   useEffect(() => {
     calculateTopScorers();
   }, [selectedPeriod, players, goals, games, quarterPeriods]);
+
+  useEffect(() => {
+    calculateTopChampions();
+  }, [selectedChampionshipYear, players, championships]);
 
   const getPlayerInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -356,6 +394,69 @@ const Index = () => {
               </CardFooter>
             </Card>
           )}
+
+          {/* Card de Campeonatos */}
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-gray-500" />
+                    Maiores Campeões
+                  </CardTitle>
+                  <CardDescription>Top 3 campeões do ano</CardDescription>
+                </div>
+                <Select value={selectedChampionshipYear.toString()} onValueChange={(value) => setSelectedChampionshipYear(parseInt(value))}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white z-50">
+                    <SelectItem value="2025">2025</SelectItem>
+                    <SelectItem value="2024">2024</SelectItem>
+                    <SelectItem value="2023">2023</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {topChampions.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  Nenhum campeonato registrado ainda.
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {topChampions.map(({ player, championships }, index) => (
+                    <li key={player.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center">
+                          <Avatar className="h-8 w-8 mr-2">
+                            {player.photo ? (
+                              <AvatarImage src={player.photo} alt={player.name} />
+                            ) : (
+                              <AvatarFallback>
+                                {getPlayerInitials(player.name)}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                          <span>{player.name}</span>
+                        </div>
+                      </div>
+                      <span className="font-bold">{championships} {championships === 1 ? 'campeonato' : 'campeonatos'}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+            <CardFooter>
+              <Button 
+                onClick={() => navigate('/campeonatos')} 
+                variant="outline" 
+                className="w-full"
+              >
+                Ver ranking completo
+              </Button>
+            </CardFooter>
+          </Card>
         </div>
       </div>
     </MainLayout>

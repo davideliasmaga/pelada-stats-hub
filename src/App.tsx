@@ -13,6 +13,7 @@ import Artilharia from "./pages/Artilharia";
 import Financeiro from "./pages/Financeiro";
 import Jogadores from "./pages/Jogadores";
 import Jogos from "./pages/Jogos";
+import Campeonatos from "./pages/Campeonatos";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
@@ -72,6 +73,13 @@ const App = () => (
                 <RequireAuth>
                   <RequireRole allowedRoles={['admin']}>
                     <Jogos />
+                  </RequireRole>
+                </RequireAuth>
+              } />
+              <Route path="/campeonatos" element={
+                <RequireAuth>
+                  <RequireRole allowedRoles={['admin']}>
+                    <Campeonatos />
                   </RequireRole>
                 </RequireAuth>
               } />

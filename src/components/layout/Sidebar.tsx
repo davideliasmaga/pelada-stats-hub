@@ -10,7 +10,7 @@ import {
   SidebarTrigger
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { Home, BarChart, Settings, Users, Calendar, PieChart } from "lucide-react";
+import { Home, BarChart, Settings, Users, Calendar, PieChart, Trophy } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { LogoWhiteBg } from "@/assets/logo-white-bg";
 
@@ -96,6 +96,18 @@ const Sidebar = () => {
                   <Link to="/jogos">
                     <Calendar className="h-5 w-5" />
                     <span>Jogos</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className={cn(
+                  "flex items-center gap-3 px-4 py-2 rounded-full",
+                  isActive('/campeonatos') && "bg-gray-800 text-white"
+                )}>
+                  <Link to="/campeonatos">
+                    <Trophy className="h-5 w-5" />
+                    <span>Campeonatos</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

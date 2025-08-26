@@ -44,6 +44,41 @@ export type Database = {
         }
         Relationships: []
       }
+      championships: {
+        Row: {
+          created_at: string | null
+          date: string
+          game_id: string | null
+          id: string
+          player_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          game_id?: string | null
+          id?: string
+          player_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          game_id?: string | null
+          id?: string
+          player_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "championships_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_players: {
         Row: {
           created_at: string | null

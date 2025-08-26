@@ -43,3 +43,11 @@ export interface User {
   role: UserRole;
   avatar?: string;
 }
+
+export interface Championship {
+  id: string;
+  gameId?: string;
+  playerId: string;
+  year: number;
+  date: string; // ISO date string
+}

@@ -67,14 +67,20 @@ const Campeonatos = () => {
       .slice(0, 10);
   };
 
-  const handleAddChampionship = async (championship: Omit<Championship, 'id'>) => {
+  const handleAddChampionship = async (newChampionships: Omit<Championship, 'id'>[]) => {
     try {
       const { createSupabaseChampionship } = await import('@/services/championshipService');
-      const newChampionship = await createSupabaseChampionship(championship);
-      setChampionships([...championships, newChampionship]);
+      const createdChampionships = [];
+      
+      for (const championship of newChampionships) {
+        const newChampionship = await createSupabaseChampionship(championship);
+        createdChampionships.push(newChampionship);
+      }
+      
+      setChampionships([...championships, ...createdChampionships]);
       setIsAddDialogOpen(false);
     } catch (error) {
-      console.error('Erro ao adicionar campeonato:', error);
+      console.error('Erro ao adicionar campeonatos:', error);
     }
   };
 

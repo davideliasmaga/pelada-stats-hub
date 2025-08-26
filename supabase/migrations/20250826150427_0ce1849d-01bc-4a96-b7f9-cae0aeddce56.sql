@@ -1,0 +1,37 @@
+-- Insert championship data with specific dates
+INSERT INTO public.championships (player_id, year, date) VALUES
+-- 3 campeonatos: Igor, Rods, Bernardo, pedrao, FJ
+((SELECT id FROM public.players WHERE name = 'Igor' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Igor' LIMIT 1), 2025, '2025-02-01'),
+((SELECT id FROM public.players WHERE name = 'Igor' LIMIT 1), 2025, '2025-03-01'),
+((SELECT id FROM public.players WHERE name = 'Rods' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Rods' LIMIT 1), 2025, '2025-02-01'),
+((SELECT id FROM public.players WHERE name = 'Rods' LIMIT 1), 2025, '2025-03-01'),
+((SELECT id FROM public.players WHERE name = 'Bernardo' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Bernardo' LIMIT 1), 2025, '2025-02-01'),
+((SELECT id FROM public.players WHERE name = 'Bernardo' LIMIT 1), 2025, '2025-03-01'),
+((SELECT id FROM public.players WHERE name = 'pedrao' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'pedrao' LIMIT 1), 2025, '2025-02-01'),
+((SELECT id FROM public.players WHERE name = 'pedrao' LIMIT 1), 2025, '2025-03-01'),
+((SELECT id FROM public.players WHERE name = 'FJ' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'FJ' LIMIT 1), 2025, '2025-02-01'),
+((SELECT id FROM public.players WHERE name = 'FJ' LIMIT 1), 2025, '2025-03-01'),
+-- 2 campeonatos: Gsilva, Victor, Guima
+((SELECT id FROM public.players WHERE name = 'Gsilva' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Gsilva' LIMIT 1), 2025, '2025-02-01'),
+((SELECT id FROM public.players WHERE name = 'Victor' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Victor' LIMIT 1), 2025, '2025-02-01'),
+((SELECT id FROM public.players WHERE name = 'Guima' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Guima' LIMIT 1), 2025, '2025-02-01'),
+-- 1 campeonato: Quati, gabrao, Lara, Fael, Kadim, Keller, Joao M, Joao, Ameba, Yago, Rod
+((SELECT id FROM public.players WHERE name = 'Quati' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'gabrao' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Lara' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Fael' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Kadim' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Keller' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Joao M' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Joao' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Ameba' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Yago' LIMIT 1), 2025, '2025-01-01'),
+((SELECT id FROM public.players WHERE name = 'Rod' LIMIT 1), 2025, '2025-01-01');

@@ -139,7 +139,7 @@ const Financeiro = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-3xl font-bold">Controle Financeiro</h1>
           <div className="flex gap-2">
-            <AddTransactionDialog onTransactionAdded={handleTransactionAdded} />
+            {isAdmin && <AddTransactionDialog onTransactionAdded={handleTransactionAdded} />}
             {isAdmin && transactions.length > 0 && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -257,32 +257,34 @@ const Financeiro = () => {
                       }`}>
                         {transaction.type === 'entrada' ? '+' : '-'}{formatCurrency(transaction.amount)}
                       </TableCell>
-                      <TableCell>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja deletar esta transação? Esta ação não pode ser desfeita.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => handleDeleteTransaction(transaction.id)}
-                                className="bg-red-600 hover:bg-red-700"
-                              >
-                                Deletar
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </TableCell>
+                       <TableCell>
+                         {isAdmin && (
+                           <AlertDialog>
+                             <AlertDialogTrigger asChild>
+                               <Button variant="destructive" size="sm">
+                                 <Trash2 className="h-4 w-4" />
+                               </Button>
+                             </AlertDialogTrigger>
+                             <AlertDialogContent>
+                               <AlertDialogHeader>
+                                 <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                 <AlertDialogDescription>
+                                   Tem certeza que deseja deletar esta transação? Esta ação não pode ser desfeita.
+                                 </AlertDialogDescription>
+                               </AlertDialogHeader>
+                               <AlertDialogFooter>
+                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                 <AlertDialogAction 
+                                   onClick={() => handleDeleteTransaction(transaction.id)}
+                                   className="bg-red-600 hover:bg-red-700"
+                                 >
+                                   Deletar
+                                 </AlertDialogAction>
+                               </AlertDialogFooter>
+                             </AlertDialogContent>
+                           </AlertDialog>
+                         )}
+                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

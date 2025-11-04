@@ -21,23 +21,27 @@ export default function ForgotPassword() {
     setIsSubmitting(true);
 
     try {
-      // Verificar se o usuário existe
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
+      // Verificar se o usuário existe via edge function
+      const { data, error } = await supabase.functions.invoke('verify-email', {
+        body: { email }
+      });
 
-      if (error || !data) {
+      if (error) {
+        console.error("Email verification error:", error);
+        toast.error("Erro ao verificar email. Tente novamente.");
+        return;
+      }
+
+      if (!data?.found) {
         toast.error("Email não encontrado no sistema.");
         return;
       }
 
-      setUserId(data.id);
+      setUserId(data.userId);
       setStep("password");
       toast.success("Email verificado! Agora defina sua nova senha.");
     } catch (err) {
-      console.error("Email verification error:", err);
+      console.error("Email verification exception:", err);
       toast.error("Erro ao verificar email. Tente novamente.");
     } finally {
       setIsSubmitting(false);

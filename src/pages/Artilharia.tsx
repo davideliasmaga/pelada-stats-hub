@@ -101,8 +101,8 @@ const Artilharia = () => {
       // Gerar períodos de trimestre
       const periods = generateQuarterPeriods(gamesData);
       setQuarterPeriods(periods);
-      if (periods.length > 0 && !selectedPeriod) {
-        setSelectedPeriod(periods[0].id); // Selecionar o primeiro período (mais recente)
+      if (periods.length > 0) {
+        setSelectedPeriod(periods[0].id); // sempre mostrar o período mais recente
       }
     } catch (error) {
       console.error('Error loading data:', error);

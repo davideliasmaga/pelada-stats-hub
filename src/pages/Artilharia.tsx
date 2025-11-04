@@ -15,8 +15,9 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Target, Calendar } from "lucide-react";
+import { Trophy, Target, Calendar, RefreshCw } from "lucide-react";
 import { getSupabasePlayers, getSupabaseGoals, getSupabaseGames } from "@/services/supabaseDataService";
 import { Player, Goal, Game, GameType } from "@/types";
 import MainLayout from "@/components/layout/MainLayout";
@@ -37,8 +38,8 @@ const Artilharia = () => {
   useEffect(() => {
     loadData();
 
-    // Set up realtime subscription for goals
-    const channel = supabase
+    // Set up realtime subscriptions
+    const goalsChannel = supabase
       .channel('goals-changes')
       .on(
         'postgres_changes',
@@ -54,19 +55,44 @@ const Artilharia = () => {
       )
       .subscribe();
 
+    const gamesChannel = supabase
+      .channel('games-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'games'
+        },
+        () => {
+          console.log('Games changed, reloading data...');
+          loadData();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(goalsChannel);
+      supabase.removeChannel(gamesChannel);
     };
   }, []);
 
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('Loading artilharia data...');
+      
       const [playersData, goalsData, gamesData] = await Promise.all([
         getSupabasePlayers(),
         getSupabaseGoals(),
         getSupabaseGames()
       ]);
+      
+      console.log('Artilharia data loaded:', {
+        players: playersData.length,
+        goals: goalsData.length,
+        games: gamesData.length
+      });
       
       setPlayers(playersData);
       setGoals(goalsData);
@@ -165,6 +191,15 @@ const Artilharia = () => {
                 </SelectContent>
               </Select>
             )}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={loadData}
+              disabled={loading}
+              title="Atualizar dados"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
           </div>
           {isAdmin && <AddGoalsDialog onGoalsAdded={handleGoalsAdded} />}
         </div>

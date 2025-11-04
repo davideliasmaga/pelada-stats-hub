@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 
@@ -28,8 +29,8 @@ const AddPlayerFromListDialog = ({
 }: AddPlayerFromListDialogProps) => {
   const [name, setName] = useState(playerName);
   const [position, setPosition] = useState('atacante');
-  const [rating, setRating] = useState('1500');
-  const [running, setRunning] = useState('normal');
+  const [rating, setRating] = useState('7');
+  const [running, setRunning] = useState('medio');
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
@@ -60,8 +61,8 @@ const AddPlayerFromListDialog = ({
       // Reset form
       setName('');
       setPosition('atacante');
-      setRating('1500');
-      setRunning('normal');
+      setRating('7');
+      setRunning('medio');
     } catch (error: any) {
       console.error('Error creating player:', error);
       toast.error(error.message || 'Erro ao criar jogador');
@@ -75,6 +76,9 @@ const AddPlayerFromListDialog = ({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Criar Novo Jogador</DialogTitle>
+          <DialogDescription>
+            Preencha os dados do novo jogador para adicioná-lo à base.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
@@ -95,11 +99,10 @@ const AddPlayerFromListDialog = ({
                 <SelectValue placeholder="Selecione a posição" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="goleiro">Goleiro</SelectItem>
-                <SelectItem value="zagueiro">Zagueiro</SelectItem>
-                <SelectItem value="lateral">Lateral</SelectItem>
-                <SelectItem value="meio">Meio-campo</SelectItem>
                 <SelectItem value="atacante">Atacante</SelectItem>
+                <SelectItem value="defensor">Defensor</SelectItem>
+                <SelectItem value="meia">Meia</SelectItem>
+                <SelectItem value="flexivel">Flexível</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -111,9 +114,10 @@ const AddPlayerFromListDialog = ({
               type="number"
               value={rating}
               onChange={(e) => setRating(e.target.value)}
-              placeholder="1500"
+              placeholder="7"
               min="0"
-              max="3000"
+              max="10"
+              step="0.1"
             />
           </div>
 
@@ -125,7 +129,7 @@ const AddPlayerFromListDialog = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="sim">Sim</SelectItem>
-                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="medio">Médio</SelectItem>
                 <SelectItem value="nao">Não</SelectItem>
               </SelectContent>
             </Select>

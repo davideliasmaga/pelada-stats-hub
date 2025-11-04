@@ -19,6 +19,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import CreatePassword from "./pages/CreatePassword";
 import Register from "./pages/Register";
+import AlimentacaoInteligente from "./pages/AlimentacaoInteligente";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +88,13 @@ const App = () => (
                 <RequireAuth>
                   <RequireRole allowedRoles={['admin']}>
                     <Admin />
+                  </RequireRole>
+                </RequireAuth>
+              } />
+              <Route path="/alimentacao-inteligente" element={
+                <RequireAuth>
+                  <RequireRole allowedRoles={['admin']}>
+                    <AlimentacaoInteligente />
                   </RequireRole>
                 </RequireAuth>
               } />

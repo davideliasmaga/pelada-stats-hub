@@ -1,1 +1,4 @@
 project_id = "ujtwhqumskbdxmnurfeq"
+
+[functions.process-game-list]
+verify_jwt = false

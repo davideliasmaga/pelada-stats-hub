@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
+import AddPlayerFromListDialog from '@/components/AddPlayerFromListDialog';
 
 interface Player {
   id: string;
@@ -44,6 +45,8 @@ export default function AlimentacaoInteligente() {
   const [isSaving, setIsSaving] = useState(false);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [playerSearchTerm, setPlayerSearchTerm] = useState<{[key: number]: string}>({});
+  const [createPlayerDialogOpen, setCreatePlayerDialogOpen] = useState(false);
+  const [selectedPlayerIndex, setSelectedPlayerIndex] = useState<number | null>(null);
 
   if (!isAdmin) {
     return (
@@ -116,38 +119,25 @@ export default function AlimentacaoInteligente() {
     setProcessedData(updated);
   };
 
-  const handleCreatePlayer = async (index: number, playerName: string) => {
-    if (!processedData) return;
-    
-    try {
-      const { data: newPlayer, error } = await supabase
-        .from('players')
-        .insert({
-          name: playerName,
-          rating: 1500,
-          position: 'Atacante',
-          running: 'normal'
-        })
-        .select()
-        .single();
+  const handleOpenCreatePlayerDialog = (index: number) => {
+    setSelectedPlayerIndex(index);
+    setCreatePlayerDialogOpen(true);
+  };
 
-      if (error) throw error;
+  const handlePlayerCreated = (newPlayer: { id: string; name: string }) => {
+    if (selectedPlayerIndex === null || !processedData) return;
 
-      // Atualizar a lista de jogadores
-      setAllPlayers([...allPlayers, newPlayer]);
+    // Atualizar a lista de jogadores
+    setAllPlayers([...allPlayers, newPlayer]);
 
-      // Atualizar o jogador processado
-      const updated = { ...processedData };
-      updated.players[index].playerId = newPlayer.id;
-      updated.players[index].matchedName = newPlayer.name;
-      updated.players[index].confidence = 'high';
-      setProcessedData(updated);
+    // Atualizar o jogador processado
+    const updated = { ...processedData };
+    updated.players[selectedPlayerIndex].playerId = newPlayer.id;
+    updated.players[selectedPlayerIndex].matchedName = newPlayer.name;
+    updated.players[selectedPlayerIndex].confidence = 'high';
+    setProcessedData(updated);
 
-      toast.success(`Jogador ${playerName} criado com sucesso!`);
-    } catch (error: any) {
-      console.error('Error creating player:', error);
-      toast.error(error.message || 'Erro ao criar jogador');
-    }
+    setSelectedPlayerIndex(null);
   };
 
   const handleSave = async () => {
@@ -358,7 +348,7 @@ Jogadores: João, Maria, Pedro, Ana, Carlos, Beatriz, Lucas, Julia"
                               </SelectContent>
                             </Select>
                             <Button
-                              onClick={() => handleCreatePlayer(index, player.originalName)}
+                              onClick={() => handleOpenCreatePlayerDialog(index)}
                               variant="outline"
                               size="sm"
                               className="w-full"
@@ -414,6 +404,15 @@ Jogadores: João, Maria, Pedro, Ana, Carlos, Beatriz, Lucas, Julia"
             </CardContent>
           </Card>
         </>
+      )}
+
+      {selectedPlayerIndex !== null && processedData && (
+        <AddPlayerFromListDialog
+          open={createPlayerDialogOpen}
+          onOpenChange={setCreatePlayerDialogOpen}
+          playerName={processedData.players[selectedPlayerIndex].originalName}
+          onPlayerCreated={handlePlayerCreated}
+        />
       )}
     </div>
   );

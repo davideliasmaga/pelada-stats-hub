@@ -133,6 +133,14 @@ export default function Login() {
                 type="button" 
                 variant="link" 
                 className="w-full text-gray-600 hover:text-gray-900"
+                onClick={() => navigate("/forgot-password")}
+              >
+                Esqueci minha senha
+              </Button>
+              <Button 
+                type="button" 
+                variant="link" 
+                className="w-full text-gray-600 hover:text-gray-900"
                 onClick={() => navigate("/register")}
               >
                 Criar uma conta

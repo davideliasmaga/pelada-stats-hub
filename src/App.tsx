@@ -19,6 +19,8 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import CreatePassword from "./pages/CreatePassword";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import AlimentacaoInteligente from "./pages/AlimentacaoInteligente";
 
 const queryClient = new QueryClient();
@@ -36,6 +38,8 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/create-password" element={<CreatePassword />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               
               {/* Protected routes - Todos os usuários autenticados (admin, mensalista, viewer) */}
               <Route path="/" element={

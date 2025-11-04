@@ -17,8 +17,9 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Target, Calendar, RefreshCw } from "lucide-react";
+import { Trophy, Target, Calendar, RefreshCw, Wrench } from "lucide-react";
 import { getSupabasePlayers, getSupabaseGoals, getSupabaseGames } from "@/services/supabaseDataService";
+import { toast } from "sonner";
 import { Player, Goal, Game, GameType } from "@/types";
 import MainLayout from "@/components/layout/MainLayout";
 import AddGoalsDialog from "@/components/AddGoalsDialog";
@@ -199,6 +200,26 @@ const Artilharia = () => {
               title="Atualizar dados"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  const { data, error } = await supabase.functions.invoke('fix-game-dates', {
+                    body: {}
+                  });
+                  if (error) throw error;
+                  toast.success('Datas corrigidas: ' + (data?.results?.reduce((a: number, r: any) => a + (r.updated||0), 0) || 0) + ' jogo(s)');
+                  await loadData();
+                } catch (e: any) {
+                  console.error(e);
+                  toast.error(e?.message || 'Falha ao corrigir datas');
+                }
+              }}
+              title="Corrigir datas de outubro (admin)"
+            >
+              <Wrench className="h-4 w-4 mr-2" /> Corrigir datas
             </Button>
           </div>
           {isAdmin && <AddGoalsDialog onGoalsAdded={handleGoalsAdded} />}

@@ -116,6 +116,40 @@ export default function AlimentacaoInteligente() {
     setProcessedData(updated);
   };
 
+  const handleCreatePlayer = async (index: number, playerName: string) => {
+    if (!processedData) return;
+    
+    try {
+      const { data: newPlayer, error } = await supabase
+        .from('players')
+        .insert({
+          name: playerName,
+          rating: 1500,
+          position: 'Atacante',
+          running: 'normal'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Atualizar a lista de jogadores
+      setAllPlayers([...allPlayers, newPlayer]);
+
+      // Atualizar o jogador processado
+      const updated = { ...processedData };
+      updated.players[index].playerId = newPlayer.id;
+      updated.players[index].matchedName = newPlayer.name;
+      updated.players[index].confidence = 'high';
+      setProcessedData(updated);
+
+      toast.success(`Jogador ${playerName} criado com sucesso!`);
+    } catch (error: any) {
+      console.error('Error creating player:', error);
+      toast.error(error.message || 'Erro ao criar jogador');
+    }
+  };
+
   const handleSave = async () => {
     if (!processedData || !gameDate) {
       toast.error('Dados incompletos para salvar');
@@ -290,10 +324,10 @@ Jogadores: João, Maria, Pedro, Ana, Carlos, Beatriz, Lucas, Julia"
                           </div>
                         </div>
 
-                        {player.confidence !== 'high' ? (
-                          <div>
+                        {player.confidence !== 'high' || !player.playerId ? (
+                          <div className="space-y-2">
                             <Label htmlFor={`player-select-${index}`} className="text-sm mb-2">
-                              Selecionar jogador da base:
+                              Selecionar jogador da base ou criar novo:
                             </Label>
                             <Select
                               value={player.playerId || undefined}
@@ -323,6 +357,14 @@ Jogadores: João, Maria, Pedro, Ana, Carlos, Beatriz, Lucas, Julia"
                                   ))}
                               </SelectContent>
                             </Select>
+                            <Button
+                              onClick={() => handleCreatePlayer(index, player.originalName)}
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                            >
+                              Criar jogador "{player.originalName}"
+                            </Button>
                           </div>
                         ) : (
                           <div className="text-sm">

@@ -46,8 +46,11 @@ Você receberá um texto com informações sobre um jogo e deve extrair:
 
 Os jogadores disponíveis no sistema são: ${players.map(p => p.name).join(', ')}
 
-Para cada jogador mencionado no texto, tente fazer match com os jogadores da base.
-Retorne apenas jogadores que você conseguir identificar com certeza.
+IMPORTANTE: Retorne TODOS os jogadores mencionados no texto, sem exceção.
+Para cada jogador, tente fazer match com os jogadores da base:
+- Se encontrar um match claro, use confidence "high" e coloque o nome exato da base em matchedName
+- Se tiver dúvida, use confidence "medium" ou "low" e coloque o nome que você acha que mais se aproxima em matchedName
+- Se não encontrar nenhum match, use confidence "low" e coloque o próprio nome do jogador em matchedName
 Os emojis ⚽ ou 🥅 indicam quantidade de gols - conte-os para cada jogador.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

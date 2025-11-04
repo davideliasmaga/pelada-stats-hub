@@ -23,6 +23,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import AddGoalsDialog from "@/components/AddGoalsDialog";
 import { generateQuarterPeriods, QuarterPeriod } from "@/utils/quarterPeriods";
 import { useUser } from "@/contexts/UserContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Artilharia = () => {
   const { isAdmin } = useUser();
@@ -35,6 +36,27 @@ const Artilharia = () => {
 
   useEffect(() => {
     loadData();
+
+    // Set up realtime subscription for goals
+    const channel = supabase
+      .channel('goals-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'goals'
+        },
+        () => {
+          console.log('Goals changed, reloading data...');
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadData = async () => {

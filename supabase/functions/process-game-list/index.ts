@@ -42,11 +42,13 @@ Você receberá um texto com informações sobre um jogo e deve extrair:
 1. Lista de jogadores mencionados
 2. Data do jogo (se mencionada)
 3. Tipo de jogo (pelada ou campeonato)
+4. Quantidade de gols de cada jogador (contar emojis ⚽ ou 🥅 antes do nome)
 
 Os jogadores disponíveis no sistema são: ${players.map(p => p.name).join(', ')}
 
 Para cada jogador mencionado no texto, tente fazer match com os jogadores da base.
-Retorne apenas jogadores que você conseguir identificar com certeza.`;
+Retorne apenas jogadores que você conseguir identificar com certeza.
+Os emojis ⚽ ou 🥅 indicam quantidade de gols - conte-os para cada jogador.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -76,9 +78,10 @@ Retorne apenas jogadores que você conseguir identificar com certeza.`;
                       properties: {
                         name: { type: "string", description: "Nome do jogador como aparece no texto" },
                         matchedName: { type: "string", description: "Nome do jogador que melhor corresponde na base de dados" },
-                        confidence: { type: "string", enum: ["high", "medium", "low"], description: "Confiança no match" }
+                        confidence: { type: "string", enum: ["high", "medium", "low"], description: "Confiança no match" },
+                        goals: { type: "number", description: "Quantidade de gols (contar emojis ⚽ ou 🥅)", default: 0 }
                       },
-                      required: ["name", "matchedName", "confidence"]
+                      required: ["name", "matchedName", "confidence", "goals"]
                     }
                   },
                   date: { 
@@ -139,7 +142,8 @@ Retorne apenas jogadores que você conseguir identificar com certeza.`;
         originalName: p.name,
         matchedName: p.matchedName,
         playerId: dbPlayer?.id || null,
-        confidence: p.confidence
+        confidence: p.confidence,
+        goals: p.goals || 0
       };
     });
 

@@ -7,9 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { useUser } from '@/contexts/UserContext';
+
+interface Player {
+  id: string;
+  name: string;
+}
 
 interface MatchedPlayer {
   originalName: string;
@@ -36,6 +42,8 @@ export default function AlimentacaoInteligente() {
   const [gameDate, setGameDate] = useState('');
   const [winnerTeam, setWinnerTeam] = useState<'time1' | 'time2'>('time1');
   const [isSaving, setIsSaving] = useState(false);
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [playerSearchTerm, setPlayerSearchTerm] = useState<{[key: number]: string}>({});
 
   if (!isAdmin) {
     return (
@@ -64,16 +72,14 @@ export default function AlimentacaoInteligente() {
 
       if (error) throw error;
 
-      // Add goals field to each player
-      const playersWithGoals = data.players.map((p: any) => ({
-        ...p,
-        goals: 0
-      }));
-
-      setProcessedData({
-        ...data,
-        players: playersWithGoals
-      });
+      // Buscar todos os jogadores para dropdown
+      const { data: playersData } = await supabase
+        .from('players')
+        .select('id, name')
+        .order('name');
+      
+      setAllPlayers(playersData || []);
+      setProcessedData(data);
 
       // Set default date if AI found one
       if (data.date) {
@@ -95,6 +101,18 @@ export default function AlimentacaoInteligente() {
     if (!processedData) return;
     const updated = { ...processedData };
     updated.players[index].goals = Math.max(0, goals);
+    setProcessedData(updated);
+  };
+
+  const handlePlayerChange = (index: number, playerId: string) => {
+    if (!processedData) return;
+    const updated = { ...processedData };
+    updated.players[index].playerId = playerId;
+    // Atualizar o matchedName com o nome do jogador selecionado
+    const selectedPlayer = allPlayers.find(p => p.id === playerId);
+    if (selectedPlayer) {
+      updated.players[index].matchedName = selectedPlayer.name;
+    }
     setProcessedData(updated);
   };
 
@@ -228,19 +246,21 @@ Jogadores: João, Maria, Pedro, Ana, Carlos, Beatriz, Lucas, Julia"
                 </div>
               </div>
 
-              <div>
-                <Label>Time Vencedor</Label>
-                <RadioGroup value={winnerTeam} onValueChange={(v) => setWinnerTeam(v as 'time1' | 'time2')} className="mt-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="time1" id="time1" />
-                    <Label htmlFor="time1">Time 1</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="time2" id="time2" />
-                    <Label htmlFor="time2">Time 2</Label>
-                  </div>
-                </RadioGroup>
-              </div>
+              {processedData.gameType === 'campeonato' && (
+                <div>
+                  <Label>Time Vencedor</Label>
+                  <RadioGroup value={winnerTeam} onValueChange={(v) => setWinnerTeam(v as 'time1' | 'time2')} className="mt-2">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="time1" id="time1" />
+                      <Label htmlFor="time1">Time 1</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="time2" id="time2" />
+                      <Label htmlFor="time2">Time 2</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -254,43 +274,78 @@ Jogadores: João, Maria, Pedro, Ana, Carlos, Beatriz, Lucas, Julia"
                 {processedData.players.map((player, index) => (
                   <div 
                     key={index} 
-                    className={`flex items-center justify-between p-3 rounded-lg border ${
-                      player.playerId ? 'bg-background' : 'bg-muted'
-                    }`}
+                    className="p-4 rounded-lg border bg-background space-y-3"
                   >
-                    <div className="flex items-center gap-3 flex-1">
-                      {player.playerId ? (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
+                    <div className="flex items-start gap-3">
+                      {player.confidence === 'high' && player.playerId ? (
+                        <CheckCircle className="h-5 w-5 text-green-600 mt-1" />
                       ) : (
-                        <AlertCircle className="h-5 w-5 text-amber-600" />
+                        <AlertCircle className="h-5 w-5 text-amber-600 mt-1" />
                       )}
-                      <div>
-                        <div className="font-medium">{player.matchedName}</div>
-                        {player.originalName !== player.matchedName && (
-                          <div className="text-sm text-muted-foreground">
-                            Original: {player.originalName}
+                      <div className="flex-1 space-y-3">
+                        <div>
+                          <div className="font-medium">{player.originalName}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Confiança: {player.confidence}
+                          </div>
+                        </div>
+
+                        {player.confidence !== 'high' ? (
+                          <div>
+                            <Label htmlFor={`player-select-${index}`} className="text-sm mb-2">
+                              Selecionar jogador da base:
+                            </Label>
+                            <Select
+                              value={player.playerId || undefined}
+                              onValueChange={(value) => handlePlayerChange(index, value)}
+                            >
+                              <SelectTrigger id={`player-select-${index}`} className="bg-background">
+                                <SelectValue placeholder="Selecione um jogador" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-background max-h-[300px]">
+                                <div className="p-2">
+                                  <Input
+                                    placeholder="Buscar jogador..."
+                                    value={playerSearchTerm[index] || ''}
+                                    onChange={(e) => setPlayerSearchTerm({...playerSearchTerm, [index]: e.target.value})}
+                                    className="mb-2"
+                                  />
+                                </div>
+                                {allPlayers
+                                  .filter(p => 
+                                    !playerSearchTerm[index] || 
+                                    p.name.toLowerCase().includes(playerSearchTerm[index].toLowerCase())
+                                  )
+                                  .map(p => (
+                                    <SelectItem key={p.id} value={p.id}>
+                                      {p.name}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : (
+                          <div className="text-sm">
+                            <span className="text-muted-foreground">Identificado como:</span>{' '}
+                            <span className="font-medium">{player.matchedName}</span>
                           </div>
                         )}
-                        <div className="text-xs text-muted-foreground">
-                          Confiança: {player.confidence}
+
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`goals-${index}`} className="text-sm">
+                            Gols:
+                          </Label>
+                          <Input
+                            id={`goals-${index}`}
+                            type="number"
+                            min="0"
+                            value={player.goals}
+                            onChange={(e) => handleGoalsChange(index, parseInt(e.target.value) || 0)}
+                            className="w-20"
+                          />
                         </div>
                       </div>
                     </div>
-                    {player.playerId && (
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor={`goals-${index}`} className="text-sm">
-                          Gols:
-                        </Label>
-                        <Input
-                          id={`goals-${index}`}
-                          type="number"
-                          min="0"
-                          value={player.goals}
-                          onChange={(e) => handleGoalsChange(index, parseInt(e.target.value) || 0)}
-                          className="w-20"
-                        />
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
